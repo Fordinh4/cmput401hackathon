@@ -63,7 +63,7 @@ const Home = () => {
   const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
   const [openTasksDropdown, setOpenTasksDropdown] = useState(null);
   const [newTask, setNewTask] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'position', direction: 'asc' });
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
   const statusRefs = useRef({});
@@ -93,9 +93,19 @@ const Home = () => {
   useEffect(() => {
     if (openTasksDropdown && tasksRefs.current[openTasksDropdown]) {
       const rect = tasksRefs.current[openTasksDropdown].getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const dropdownWidth = 280; // min-width of tasks dropdown
+      
+      let left = rect.left + window.scrollX;
+      
+      // Adjust if dropdown would overflow right side of screen
+      if (left + dropdownWidth > viewportWidth) {
+        left = viewportWidth - dropdownWidth - 20; // 20px margin from edge
+      }
+      
       setTasksDropdownPos({
         top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        left: left,
       });
     }
   }, [openTasksDropdown]);
@@ -139,6 +149,20 @@ const Home = () => {
 
     setJobs(sortedJobs);
   };
+
+  // Initial sort on mount
+  useEffect(() => {
+    if (jobs.length > 0 && sortConfig.key === 'position') {
+      const sortedJobs = [...jobs].sort((a, b) => {
+        const aVal = a.position.toLowerCase();
+        const bVal = b.position.toLowerCase();
+        if (aVal < bVal) return -1;
+        if (aVal > bVal) return 1;
+        return 0;
+      });
+      setJobs(sortedJobs);
+    }
+  }, []); // Only run once on mount
 
   // Inline editing
   const startEdit = (jobId, field, currentValue) => {
@@ -204,6 +228,10 @@ const Home = () => {
       ));
       setNewTask('');
     }
+  };
+
+  const getCurrentJob = (jobId) => {
+    return jobs.find(j => j.id === jobId);
   };
 
   const addNewJob = () => {
@@ -290,35 +318,35 @@ const Home = () => {
           <table className="jobs-table">
             <thead>
               <tr>
-                <th onClick={() => handleSort('position')}>
-                  Position {sortConfig.key === 'position' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('position')} className={sortConfig.key === 'position' ? 'sorted-column' : ''}>
+                  Position {sortConfig.key === 'position' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('company')}>
-                  Company {sortConfig.key === 'company' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('company')} className={sortConfig.key === 'company' ? 'sorted-column' : ''}>
+                  Company {sortConfig.key === 'company' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('maxSalary')}>
-                  Max Salary {sortConfig.key === 'maxSalary' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('maxSalary')} className={sortConfig.key === 'maxSalary' ? 'sorted-column' : ''}>
+                  Max Salary {sortConfig.key === 'maxSalary' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('location')}>
-                  Location {sortConfig.key === 'location' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('location')} className={sortConfig.key === 'location' ? 'sorted-column' : ''}>
+                  Location {sortConfig.key === 'location' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('status')}>
-                  Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('status')} className={sortConfig.key === 'status' ? 'sorted-column' : ''}>
+                  Status {sortConfig.key === 'status' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('dateSaved')}>
-                  Date Saved {sortConfig.key === 'dateSaved' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('dateSaved')} className={sortConfig.key === 'dateSaved' ? 'sorted-column' : ''}>
+                  Date Saved {sortConfig.key === 'dateSaved' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('deadline')}>
-                  Deadline {sortConfig.key === 'deadline' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('deadline')} className={sortConfig.key === 'deadline' ? 'sorted-column' : ''}>
+                  Deadline {sortConfig.key === 'deadline' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('dateApplied')}>
-                  Date Applied {sortConfig.key === 'dateApplied' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('dateApplied')} className={sortConfig.key === 'dateApplied' ? 'sorted-column' : ''}>
+                  Date Applied {sortConfig.key === 'dateApplied' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('followUp')}>
-                  Follow Up {sortConfig.key === 'followUp' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('followUp')} className={sortConfig.key === 'followUp' ? 'sorted-column' : ''}>
+                  Follow Up {sortConfig.key === 'followUp' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
-                <th onClick={() => handleSort('cookedLevel')}>
-                  Cooked Level {sortConfig.key === 'cookedLevel' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('cookedLevel')} className={sortConfig.key === 'cookedLevel' ? 'sorted-column' : ''}>
+                  Cooked Level {sortConfig.key === 'cookedLevel' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
                 <th>Tasks</th>
               </tr>
@@ -533,27 +561,26 @@ const Home = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="tasks-list">
-              {jobs.find(j => j.id === openTasksDropdown)?.tasks.length === 0 ? (
-                <div className="no-tasks">No tasks yet</div>
-              ) : (
-                jobs.find(j => j.id === openTasksDropdown)?.tasks.map((task, i) => {
-                  const currentJob = jobs.find(j => j.id === openTasksDropdown);
-                  return (
-                    <div key={i} className="task-item">
-                      <label className="task-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={currentJob?.completedTasks.includes(task)}
-                          onChange={() => toggleTask(openTasksDropdown, task)}
-                        />
-                        <span className={currentJob?.completedTasks.includes(task) ? 'task-completed' : ''}>
-                          {task}
-                        </span>
-                      </label>
-                    </div>
-                  );
-                })
-              )}
+              {(() => {
+                const currentJob = getCurrentJob(openTasksDropdown);
+                if (!currentJob || currentJob.tasks.length === 0) {
+                  return <div className="no-tasks">No tasks yet</div>;
+                }
+                return currentJob.tasks.map((task, i) => (
+                  <div key={i} className="task-item">
+                    <label className="task-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={currentJob.completedTasks.includes(task)}
+                        onChange={() => toggleTask(openTasksDropdown, task)}
+                      />
+                      <span className={currentJob.completedTasks.includes(task) ? 'task-completed' : ''}>
+                        {task}
+                      </span>
+                    </label>
+                  </div>
+                ));
+              })()}
             </div>
             <div className="add-task">
               <input
@@ -561,7 +588,9 @@ const Home = () => {
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') addTask(openTasksDropdown);
+                  if (e.key === 'Enter') {
+                    addTask(openTasksDropdown);
+                  }
                 }}
                 placeholder="New task..."
                 className="task-input"
