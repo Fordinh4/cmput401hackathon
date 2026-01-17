@@ -207,7 +207,10 @@ body {
 .jobs-table {
   width: 100%;
   min-width: 1200px;
-  border-collapse: collapse;
+  border-collapse: separate; /* Changed from collapse to separate */
+  border-spacing: 0;          /* Removes gaps between cells */
+  border-radius: 9px;        /* The "inner" curve radius */
+  overflow: hidden;
 }
 
 .jobs-table thead {
