@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Briefcase, TrendingUp, Calendar, CheckCircle2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import './Home.css';
 
@@ -63,6 +64,10 @@ const Home = () => {
   const [openTasksDropdown, setOpenTasksDropdown] = useState(null);
   const [newTask, setNewTask] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
+  const statusRefs = useRef({});
+  const tasksRefs = useRef({});
 
   const statusOptions = ['Applying', 'Applied', 'Interviewing', 'Negotiating', 'Accepted', 'No Response'];
   const statusColors = {
@@ -73,6 +78,27 @@ const Home = () => {
     'Accepted': '#8FBC8F',
     'No Response': '#E74C3C'
   };
+
+  // Update dropdown position when opened
+  useEffect(() => {
+    if (openStatusDropdown && statusRefs.current[openStatusDropdown]) {
+      const rect = statusRefs.current[openStatusDropdown].getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [openStatusDropdown]);
+
+  useEffect(() => {
+    if (openTasksDropdown && tasksRefs.current[openTasksDropdown]) {
+      const rect = tasksRefs.current[openTasksDropdown].getBoundingClientRect();
+      setTasksDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [openTasksDropdown]);
 
   // Calculate status counts
   const getStatusCounts = () => {
@@ -384,8 +410,9 @@ const Home = () => {
                       job.location
                     )}
                   </td>
-                  <td style={{ position: 'relative' }}>
+                  <td>
                     <div 
+                      ref={(el) => (statusRefs.current[job.id] = el)}
                       className="status-dropdown-trigger"
                       style={{ 
                         backgroundColor: `${statusColors[job.status]}20`,
@@ -397,26 +424,6 @@ const Home = () => {
                       {job.status}
                       <ChevronDown size={16} />
                     </div>
-                    {openStatusDropdown === job.id && (
-                      <>
-                        <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
-                        <div className={`status-dropdown ${index >= jobs.length - 2 ? 'dropdown-up' : ''}`}>
-                          {statusOptions.map(status => (
-                            <div
-                              key={status}
-                              className="status-option"
-                              style={{
-                                backgroundColor: job.status === status ? `${statusColors[status]}20` : 'transparent',
-                                color: statusColors[status]
-                              }}
-                              onClick={() => updateStatus(job.id, status)}
-                            >
-                              {status}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
                   </td>
                   <td>
                     <input
@@ -463,55 +470,14 @@ const Home = () => {
                       ))}
                     </div>
                   </td>
-                  <td style={{ position: 'relative' }}>
+                  <td>
                     <div
+                      ref={(el) => (tasksRefs.current[job.id] = el)}
                       className="tasks-trigger"
                       onClick={() => setOpenTasksDropdown(openTasksDropdown === job.id ? null : job.id)}
                     >
                       Tasks ({job.completedTasks.length}/{job.tasks.length})
                     </div>
-                    {openTasksDropdown === job.id && (
-                      <>
-                        <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
-                        <div className={`tasks-dropdown ${index >= jobs.length - 2 ? 'dropdown-up' : ''}`} onClick={(e) => e.stopPropagation()}>
-                          <div className="tasks-list">
-                            {job.tasks.length === 0 ? (
-                              <div className="no-tasks">No tasks yet</div>
-                            ) : (
-                              job.tasks.map((task, i) => (
-                                <div key={i} className="task-item">
-                                  <label className="task-checkbox">
-                                    <input
-                                      type="checkbox"
-                                      checked={job.completedTasks.includes(task)}
-                                      onChange={() => toggleTask(job.id, task)}
-                                    />
-                                    <span className={job.completedTasks.includes(task) ? 'task-completed' : ''}>
-                                      {task}
-                                    </span>
-                                  </label>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                          <div className="add-task">
-                            <input
-                              type="text"
-                              value={newTask}
-                              onChange={(e) => setNewTask(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') addTask(job.id);
-                              }}
-                              placeholder="New task..."
-                              className="task-input"
-                            />
-                            <button onClick={() => addTask(job.id)} className="add-task-btn">
-                              Add
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -519,6 +485,95 @@ const Home = () => {
           </table>
         </div>
       </div>
+
+      {/* Status Dropdown Portal */}
+      {openStatusDropdown && createPortal(
+        <>
+          <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
+          <div 
+            className="status-dropdown"
+            style={{
+              position: 'absolute',
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+            }}
+          >
+            {statusOptions.map(status => {
+              const currentJob = jobs.find(j => j.id === openStatusDropdown);
+              return (
+                <div
+                  key={status}
+                  className="status-option"
+                  style={{
+                    backgroundColor: currentJob?.status === status ? `${statusColors[status]}20` : 'transparent',
+                    color: statusColors[status]
+                  }}
+                  onClick={() => updateStatus(openStatusDropdown, status)}
+                >
+                  {status}
+                </div>
+              );
+            })}
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* Tasks Dropdown Portal */}
+      {openTasksDropdown && createPortal(
+        <>
+          <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
+          <div 
+            className="tasks-dropdown"
+            style={{
+              position: 'absolute',
+              top: tasksDropdownPos.top,
+              left: tasksDropdownPos.left,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="tasks-list">
+              {jobs.find(j => j.id === openTasksDropdown)?.tasks.length === 0 ? (
+                <div className="no-tasks">No tasks yet</div>
+              ) : (
+                jobs.find(j => j.id === openTasksDropdown)?.tasks.map((task, i) => {
+                  const currentJob = jobs.find(j => j.id === openTasksDropdown);
+                  return (
+                    <div key={i} className="task-item">
+                      <label className="task-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={currentJob?.completedTasks.includes(task)}
+                          onChange={() => toggleTask(openTasksDropdown, task)}
+                        />
+                        <span className={currentJob?.completedTasks.includes(task) ? 'task-completed' : ''}>
+                          {task}
+                        </span>
+                      </label>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="add-task">
+              <input
+                type="text"
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addTask(openTasksDropdown);
+                }}
+                placeholder="New task..."
+                className="task-input"
+              />
+              <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
+                Add
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 };
