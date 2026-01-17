@@ -66,17 +66,19 @@ const Home = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'position', direction: 'asc' });
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
+  const [selectedJobs, setSelectedJobs] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const statusRefs = useRef({});
   const tasksRefs = useRef({});
 
   const statusOptions = ['Applying', 'Applied', 'Interviewing', 'Negotiating', 'Accepted', 'No Response'];
   const statusColors = {
-    'Applying': '#5A7C8C',
-    'Applied': '#BD632F',
-    'Interviewing': '#D8973C',
-    'Negotiating': '#E8A84D',
-    'Accepted': '#5EAA6F', 
-    'No Response': '#C75450'  
+    'Applying': '#5A7C8C',      // Muted teal-blue (starting phase)
+    'Applied': '#BD632F',       // Your secondary brown (submitted)
+    'Interviewing': '#D8973C',  // Your primary gold (active phase)
+    'Negotiating': '#E8A84D',   // Bright gold (exciting phase)
+    'Accepted': '#5EAA6F',      // Success green (achievement)
+    'No Response': '#C75450'    // Softer red (rejection/no response)
   };
 
   // Update dropdown position when opened
@@ -234,6 +236,37 @@ const Home = () => {
     return jobs.find(j => j.id === jobId);
   };
 
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedJobs.length === jobs.length) {
+      setSelectedJobs([]);
+    } else {
+      setSelectedJobs(jobs.map(job => job.id));
+    }
+  };
+
+  const toggleSelectJob = (jobId) => {
+    if (selectedJobs.includes(jobId)) {
+      setSelectedJobs(selectedJobs.filter(id => id !== jobId));
+    } else {
+      setSelectedJobs([...selectedJobs, jobId]);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setJobs(jobs.filter(job => !selectedJobs.includes(job.id)));
+    setSelectedJobs([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
   const addNewJob = () => {
     const newJob = {
       id: Date.now(),
@@ -260,20 +293,6 @@ const Home = () => {
 
   return (
     <div className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="header-title">
-            <Briefcase className="header-icon" />
-            <h1>Job Application Tracker</h1>
-          </div>
-          <button className="add-job-btn" onClick={addNewJob}>
-            <Plus size={20} />
-            Add New Job
-          </button>
-        </div>
-      </header>
-
       {/* Dashboard */}
       <div className="dashboard">
         {/* Progress Bar */}
@@ -310,14 +329,43 @@ const Home = () => {
             </div>
           ))}
         </div>
+
+        {/* Add New Job Button */}
+        <div className="add-job-container">
+          <button className="add-job-btn" onClick={addNewJob}>
+            <Plus size={20} />
+            Add New Job
+          </button>
+        </div>
       </div>
 
       {/* Table */}
       <div className="table-container">
+        {/* Action Bar - Shows when items are selected */}
+        {selectedJobs.length > 0 && (
+          <div className="action-bar">
+            <div className="action-bar-content">
+              <span className="selected-count">{selectedJobs.length} selected</span>
+              <button className="delete-btn" onClick={handleDeleteSelected}>
+                <X size={18} />
+                Delete Selected
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table className="jobs-table">
             <thead>
               <tr>
+                <th style={{ width: '50px' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedJobs.length === jobs.length && jobs.length > 0}
+                    onChange={toggleSelectAll}
+                    className="select-checkbox"
+                  />
+                </th>
                 <th onClick={() => handleSort('position')} className={sortConfig.key === 'position' ? 'sorted-column' : ''}>
                   Position {sortConfig.key === 'position' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                 </th>
@@ -353,7 +401,15 @@ const Home = () => {
             </thead>
             <tbody>
               {jobs.map((job, index) => (
-                <tr key={job.id}>
+                <tr key={job.id} className={selectedJobs.includes(job.id) ? 'selected-row' : ''}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedJobs.includes(job.id)}
+                      onChange={() => toggleSelectJob(job.id)}
+                      className="select-checkbox"
+                    />
+                  </td>
                   <td 
                     className="editable-cell"
                     onClick={() => !editingCell && startEdit(job.id, 'position', job.position)}
@@ -601,6 +657,33 @@ const Home = () => {
             </div>
           </div>
         </>,
+        document.body
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && createPortal(
+        <div className="modal-overlay" onClick={cancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Confirm Delete</h3>
+              <button className="modal-close" onClick={cancelDelete}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete {selectedJobs.length} job application{selectedJobs.length > 1 ? 's' : ''}?</p>
+              <p className="modal-warning">This action cannot be undone.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn cancel-btn" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button className="modal-btn confirm-btn" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>

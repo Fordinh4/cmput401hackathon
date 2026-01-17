@@ -31,65 +31,9 @@ body {
   margin: 0;
 }
 
-/* Header */
-.app-header {
-  background: linear-gradient(135deg, #273E47, #BD632F);
-  border-radius: 16px;
-  padding: 30px;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: white;
-}
-
-.header-icon {
-  width: 36px;
-  height: 36px;
-}
-
-.header-title h1 {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.add-job-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #273E47, #BD632F);
-  color: white;
-  border: none;
-  padding: 14px 28px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.add-job-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
 /* Dashboard */
 .dashboard {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 /* Progress Container */
@@ -165,6 +109,34 @@ body {
   color: #273E47;
 }
 
+/* Add Job Button Container */
+.add-job-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.add-job-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #273E47, #BD632F);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.add-job-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
 /* Table Container */
 .table-container {
   background: white;
@@ -172,6 +144,60 @@ body {
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+}
+
+/* Action Bar */
+.action-bar {
+  background: linear-gradient(135deg, #273E47, #BD632F);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.selected-count {
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #bf1f1a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+  background: #ed1912;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .table-wrapper {
@@ -241,10 +267,26 @@ body {
   background-color: #f0f0f0;
 }
 
+.jobs-table tbody tr.selected-row {
+  background-color: #D8973C20 !important;
+}
+
+.jobs-table tbody tr.selected-row:hover {
+  background-color: #D8973C30 !important;
+}
+
 .jobs-table td {
   padding: 16px 14px;
   font-size: 14px;
   vertical-align: middle;
+}
+
+/* Checkboxes */
+.select-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #D8973C;
 }
 
 /* Editable Cells */
@@ -491,15 +533,6 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .header-title h1 {
-    font-size: 24px;
-  }
-  
-  .header-icon {
-    width: 28px;
-    height: 28px;
-  }
-  
   .status-cards {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
@@ -512,6 +545,14 @@ body {
     overflow-x: scroll;
     -webkit-overflow-scrolling: touch;
   }
+  
+  .add-job-container {
+    justify-content: center;
+  }
+  
+  .add-job-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -519,18 +560,135 @@ body {
     padding: 12px;
   }
   
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .add-job-btn {
-    justify-content: center;
-    width: 100%;
-  }
-  
   .progress-container,
   .table-container {
     padding: 16px;
   }
+}
+
+/* Delete Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #273E47;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: #273E47;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #273E47;
+  line-height: 1.5;
+}
+
+.modal-warning {
+  color: #670501;
+  font-weight: 600;
+  font-size: 14px !important;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #273E47;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.confirm-btn {
+  background: #C75450;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background: #d33630;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(199, 84, 80, 0.3);
 }
