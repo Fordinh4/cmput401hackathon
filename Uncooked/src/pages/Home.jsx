@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import AddJobModal from "../components/AddJobModal";
 import { Plus, Briefcase, ChevronDown } from "lucide-react";
@@ -67,37 +67,53 @@ export default function Home() {
     },
   ]);
 
-  const [editingCell, setEditingCell] = useState(null);
-  const [editValue, setEditValue] = useState('');
-  const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
-  const [openTasksDropdown, setOpenTasksDropdown] = useState(null);
-  const [newTask, setNewTask] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'position', direction: 'asc' });
+  const [editingCell, setEditingCell] = useState(null); // { jobId, field } | null
+  const [editValue, setEditValue] = useState("");
+  const [openStatusDropdown, setOpenStatusDropdown] = useState(null); // jobId | null
+  const [openTasksDropdown, setOpenTasksDropdown] = useState(null); // jobId | null
+  const [newTask, setNewTask] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: "position", direction: "asc" });
+
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
 
   const statusRefs = useRef({});
   const tasksRefs = useRef({});
 
-  const statusOptions = [
-    "Applying",
-    "Applied",
-    "Interviewing",
-    "Negotiating",
-    "Accepted",
-    "No Response",
-  ];
+  const statusOptions = useMemo(
+    () => ["Applying", "Applied", "Interviewing", "Negotiating", "Accepted", "No Response"],
+    []
+  );
 
-  const statusColors = {
-    Applying: "#9B59B6",
-    Applied: "#BD632F",
-    Interviewing: "#D8973C",
-    Negotiating: "#E8B55E",
-    Accepted: "#8FBC8F",
-    "No Response": "#E74C3C",
-  };
+  const statusColors = useMemo(
+    () => ({
+      Applying: "#9B59B6",
+      Applied: "#BD632F",
+      Interviewing: "#D8973C",
+      Negotiating: "#E8B55E",
+      Accepted: "#8FBC8F",
+      "No Response": "#E74C3C",
+    }),
+    []
+  );
 
-  // Update dropdown position when opened
+  // Compute status counts (memoized)
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    statusOptions.forEach((status) => {
+      counts[status] = jobs.filter((job) => job.status === status).length;
+    });
+    return counts;
+  }, [jobs, statusOptions]);
+
+  const totalJobs = jobs.length;
+
+  // Current dropdown jobs
+  const currentStatusJob = openStatusDropdown
+    ? jobs.find((j) => j.id === openStatusDropdown)
+    : null;
+
+  // Update dropdown position when opened (Status)
   useEffect(() => {
     if (openStatusDropdown && statusRefs.current[openStatusDropdown]) {
       const rect = statusRefs.current[openStatusDropdown].getBoundingClientRect();
@@ -108,22 +124,21 @@ export default function Home() {
     }
   }, [openStatusDropdown]);
 
+  // Update dropdown position when opened (Tasks)
   useEffect(() => {
     if (openTasksDropdown && tasksRefs.current[openTasksDropdown]) {
       const rect = tasksRefs.current[openTasksDropdown].getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const dropdownWidth = 280; // min-width of tasks dropdown
-      
+
       let left = rect.left + window.scrollX;
-      
-      // Adjust if dropdown would overflow right side of screen
       if (left + dropdownWidth > viewportWidth) {
         left = viewportWidth - dropdownWidth - 20; // 20px margin from edge
       }
-      
+
       setTasksDropdownPos({
         top: rect.bottom + window.scrollY,
-        left: left,
+        left,
       });
     }
   }, [openTasksDropdown]);
@@ -144,22 +159,24 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editingCell]);
 
-  // Calculate status counts
-  const getStatusCounts = () => {
-    const counts = {};
-    statusOptions.forEach((status) => {
-      counts[status] = jobs.filter((job) => job.status === status).length;
-    });
-    return counts;
-  };
+  // Close dropdowns on scroll/resize (keeps portals from “floating away”)
+  useEffect(() => {
+    const close = () => {
+      setOpenStatusDropdown(null);
+      setOpenTasksDropdown(null);
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, []);
 
-  // Sort functionality (sorts the jobs array)
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+  // Sorting: compute sorted list from jobs + sortConfig (do NOT mutate jobs order in state)
+  const sortedJobs = useMemo(() => {
+    const key = sortConfig.key;
+    const dir = sortConfig.direction;
 
     const sorted = [...jobs].sort((a, b) => {
       let aVal = a[key];
@@ -169,38 +186,32 @@ export default function Home() {
       if (key === "maxSalary" || key === "cookedLevel") {
         aVal = aVal || 0;
         bVal = bVal || 0;
-        return direction === "asc" ? aVal - bVal : bVal - aVal;
+        return dir === "asc" ? aVal - bVal : bVal - aVal;
       }
 
       // nulls last
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
+      if (aVal === null || aVal === undefined || aVal === "") return 1;
+      if (bVal === null || bVal === undefined || bVal === "") return -1;
 
       // string compare
       if (typeof aVal === "string") aVal = aVal.toLowerCase();
       if (typeof bVal === "string") bVal = bVal.toLowerCase();
 
-      if (aVal < bVal) return direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return direction === "asc" ? 1 : -1;
+      if (aVal < bVal) return dir === "asc" ? -1 : 1;
+      if (aVal > bVal) return dir === "asc" ? 1 : -1;
       return 0;
     });
 
-    setJobs(sortedJobs);
-  };
+    return sorted;
+  }, [jobs, sortConfig]);
 
-  // Initial sort on mount
-  useEffect(() => {
-    if (jobs.length > 0 && sortConfig.key === 'position') {
-      const sortedJobs = [...jobs].sort((a, b) => {
-        const aVal = a.position.toLowerCase();
-        const bVal = b.position.toLowerCase();
-        if (aVal < bVal) return -1;
-        if (aVal > bVal) return 1;
-        return 0;
-      });
-      setJobs(sortedJobs);
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
-  }, []); // Only run once on mount
+    setSortConfig({ key, direction });
+  };
 
   // Inline editing
   const startEdit = (jobId, field, currentValue) => {
@@ -274,9 +285,7 @@ export default function Home() {
     }
   };
 
-  const getCurrentJob = (jobId) => {
-    return jobs.find(j => j.id === jobId);
-  };
+  const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
 
   const addNewJob = () => {
     const today = new Date().toISOString().split("T")[0];
@@ -299,17 +308,6 @@ export default function Home() {
     };
     setJobs([newJob, ...jobs]);
   };
-
-  const statusCounts = getStatusCounts();
-  const totalJobs = jobs.length;
-
-  const currentStatusJob = openStatusDropdown
-    ? jobs.find((j) => j.id === openStatusDropdown)
-    : null;
-
-  const currentTasksJob = openTasksDropdown
-    ? jobs.find((j) => j.id === openTasksDropdown)
-    : null;
 
   return (
     <div className="app-shell">
@@ -340,7 +338,7 @@ export default function Home() {
             <h2 className="progress-title">Application Progress</h2>
             <div className="progress-bar">
               {statusOptions.map((status) => {
-                const count = statusCounts[status];
+                const count = statusCounts[status] || 0;
                 const percentage = totalJobs > 0 ? (count / totalJobs) * 100 : 0;
                 return (
                   <div
@@ -371,213 +369,308 @@ export default function Home() {
                 <div className="status-card-header" style={{ color: statusColors[status] }}>
                   {status}
                 </div>
-                <div className="status-card-count">{statusCounts[status]}</div>
+                <div className="status-card-count">{statusCounts[status] || 0}</div>
               </div>
             ))}
           </div>
         </div>
 
-      {/* Table */}
-      <div className="table-container">
-        <div className="table-wrapper">
-          <table className="jobs-table">
-            <thead>
-              <tr>
-                <th onClick={() => handleSort('position')} className={sortConfig.key === 'position' ? 'sorted-column' : ''}>
-                  Position {sortConfig.key === 'position' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('company')} className={sortConfig.key === 'company' ? 'sorted-column' : ''}>
-                  Company {sortConfig.key === 'company' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('maxSalary')} className={sortConfig.key === 'maxSalary' ? 'sorted-column' : ''}>
-                  Max Salary {sortConfig.key === 'maxSalary' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('location')} className={sortConfig.key === 'location' ? 'sorted-column' : ''}>
-                  Location {sortConfig.key === 'location' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('status')} className={sortConfig.key === 'status' ? 'sorted-column' : ''}>
-                  Status {sortConfig.key === 'status' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('dateSaved')} className={sortConfig.key === 'dateSaved' ? 'sorted-column' : ''}>
-                  Date Saved {sortConfig.key === 'dateSaved' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('deadline')} className={sortConfig.key === 'deadline' ? 'sorted-column' : ''}>
-                  Deadline {sortConfig.key === 'deadline' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('dateApplied')} className={sortConfig.key === 'dateApplied' ? 'sorted-column' : ''}>
-                  Date Applied {sortConfig.key === 'dateApplied' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('followUp')} className={sortConfig.key === 'followUp' ? 'sorted-column' : ''}>
-                  Follow Up {sortConfig.key === 'followUp' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th onClick={() => handleSort('cookedLevel')} className={sortConfig.key === 'cookedLevel' ? 'sorted-column' : ''}>
-                  Cooked Level {sortConfig.key === 'cookedLevel' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                </th>
-                <th>Tasks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job, index) => (
-                <tr key={job.id}>
-                  <td 
-                    className="editable-cell"
-                    onClick={() => !editingCell && startEdit(job.id, 'position', job.position)}
+        {/* Table */}
+        <div className="table-container">
+          <div className="table-wrapper">
+            <table className="jobs-table">
+              <thead>
+                <tr>
+                  <th
+                    onClick={() => handleSort("position")}
+                    className={sortConfig.key === "position" ? "sorted-column" : ""}
                   >
-                    {editingCell?.jobId === job.id && editingCell?.field === 'position' ? (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => saveEdit(job.id, 'position')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(job.id, 'position');
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
-                        autoFocus
-                        className="edit-input"
-                      />
-                    ) : (
-                      job.position
+                    Position{" "}
+                    {sortConfig.key === "position" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
                     )}
-                  </td>
-                  <td 
-                    className="editable-cell"
-                    onClick={() => !editingCell && startEdit(job.id, 'company', job.company)}
+                  </th>
+                  <th
+                    onClick={() => handleSort("company")}
+                    className={sortConfig.key === "company" ? "sorted-column" : ""}
                   >
-                    {editingCell?.jobId === job.id && editingCell?.field === 'company' ? (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => saveEdit(job.id, 'company')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(job.id, 'company');
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
-                        autoFocus
-                        className="edit-input"
-                      />
-                    ) : (
-                      job.company
+                    Company{" "}
+                    {sortConfig.key === "company" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
                     )}
-                  </td>
-                  <td 
-                    className="editable-cell"
-                    onClick={() => !editingCell && startEdit(job.id, 'maxSalary', job.maxSalary)}
+                  </th>
+                  <th
+                    onClick={() => handleSort("maxSalary")}
+                    className={sortConfig.key === "maxSalary" ? "sorted-column" : ""}
                   >
-                    {editingCell?.jobId === job.id && editingCell?.field === 'maxSalary' ? (
-                      <input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => saveEdit(job.id, 'maxSalary')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(job.id, 'maxSalary');
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
-                        autoFocus
-                        className="edit-input"
-                      />
-                    ) : (
-                      `$${job.maxSalary.toLocaleString()}`
+                    Max Salary{" "}
+                    {sortConfig.key === "maxSalary" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
                     )}
-                  </td>
-                  <td 
-                    className="editable-cell"
-                    onClick={() => !editingCell && startEdit(job.id, 'location', job.location)}
+                  </th>
+                  <th
+                    onClick={() => handleSort("location")}
+                    className={sortConfig.key === "location" ? "sorted-column" : ""}
                   >
-                    {editingCell?.jobId === job.id && editingCell?.field === 'location' ? (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => saveEdit(job.id, 'location')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(job.id, 'location');
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
-                        autoFocus
-                        className="edit-input"
-                      />
-                    ) : (
-                      job.location
+                    Location{" "}
+                    {sortConfig.key === "location" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
                     )}
-                  </td>
-                  <td>
-                    <div 
-                      ref={(el) => (statusRefs.current[job.id] = el)}
-                      className="status-dropdown-trigger"
-                      style={{ 
-                        backgroundColor: `${statusColors[job.status]}20`,
-                        color: statusColors[job.status],
-                        borderColor: statusColors[job.status]
-                      }}
-                      onClick={() => setOpenStatusDropdown(openStatusDropdown === job.id ? null : job.id)}
-                    >
-                      {job.status}
-                      <ChevronDown size={16} />
-                    </div>
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      value={job.dateSaved || ''}
-                      onChange={(e) => updateDate(job.id, 'dateSaved', e.target.value)}
-                      className="date-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      value={job.deadline || ''}
-                      onChange={(e) => updateDate(job.id, 'deadline', e.target.value)}
-                      className="date-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      value={job.dateApplied || ''}
-                      onChange={(e) => updateDate(job.id, 'dateApplied', e.target.value)}
-                      className="date-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      value={job.followUp || ''}
-                      onChange={(e) => updateDate(job.id, 'followUp', e.target.value)}
-                      className="date-input"
-                    />
-                  </td>
-                  <td>
-                    <div className="star-rating">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <span
-                          key={star}
-                          className={`star ${star <= job.cookedLevel ? 'star-filled' : ''}`}
-                          onClick={() => updateRating(job.id, star)}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <div
-                      ref={(el) => (tasksRefs.current[job.id] = el)}
-                      className="tasks-trigger"
-                      onClick={() => setOpenTasksDropdown(openTasksDropdown === job.id ? null : job.id)}
-                    >
-                      Tasks ({job.completedTasks.length}/{job.tasks.length})
-                    </div>
-                  </td>
+                  </th>
+                  <th
+                    onClick={() => handleSort("status")}
+                    className={sortConfig.key === "status" ? "sorted-column" : ""}
+                  >
+                    Status{" "}
+                    {sortConfig.key === "status" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    onClick={() => handleSort("dateSaved")}
+                    className={sortConfig.key === "dateSaved" ? "sorted-column" : ""}
+                  >
+                    Date Saved{" "}
+                    {sortConfig.key === "dateSaved" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    onClick={() => handleSort("deadline")}
+                    className={sortConfig.key === "deadline" ? "sorted-column" : ""}
+                  >
+                    Deadline{" "}
+                    {sortConfig.key === "deadline" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    onClick={() => handleSort("dateApplied")}
+                    className={sortConfig.key === "dateApplied" ? "sorted-column" : ""}
+                  >
+                    Date Applied{" "}
+                    {sortConfig.key === "dateApplied" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    onClick={() => handleSort("followUp")}
+                    className={sortConfig.key === "followUp" ? "sorted-column" : ""}
+                  >
+                    Follow Up{" "}
+                    {sortConfig.key === "followUp" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    onClick={() => handleSort("cookedLevel")}
+                    className={sortConfig.key === "cookedLevel" ? "sorted-column" : ""}
+                  >
+                    Cooked Level{" "}
+                    {sortConfig.key === "cookedLevel" && (
+                      <span className="sort-indicator">
+                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
+                  <th>Tasks</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {sortedJobs.map((job) => (
+                  <tr key={job.id}>
+                    <td
+                      className="editable-cell"
+                      onClick={() => !editingCell && startEdit(job.id, "position", job.position)}
+                    >
+                      {editingCell?.jobId === job.id && editingCell?.field === "position" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(job.id, "position")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(job.id, "position");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="edit-input"
+                        />
+                      ) : (
+                        job.position
+                      )}
+                    </td>
+
+                    <td
+                      className="editable-cell"
+                      onClick={() => !editingCell && startEdit(job.id, "company", job.company)}
+                    >
+                      {editingCell?.jobId === job.id && editingCell?.field === "company" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(job.id, "company")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(job.id, "company");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="edit-input"
+                        />
+                      ) : (
+                        job.company
+                      )}
+                    </td>
+
+                    <td
+                      className="editable-cell"
+                      onClick={() => !editingCell && startEdit(job.id, "maxSalary", job.maxSalary)}
+                    >
+                      {editingCell?.jobId === job.id && editingCell?.field === "maxSalary" ? (
+                        <input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(job.id, "maxSalary")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(job.id, "maxSalary");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="edit-input"
+                        />
+                      ) : (
+                        `$${Number(job.maxSalary || 0).toLocaleString()}`
+                      )}
+                    </td>
+
+                    <td
+                      className="editable-cell"
+                      onClick={() => !editingCell && startEdit(job.id, "location", job.location)}
+                    >
+                      {editingCell?.jobId === job.id && editingCell?.field === "location" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(job.id, "location")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(job.id, "location");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="edit-input"
+                        />
+                      ) : (
+                        job.location
+                      )}
+                    </td>
+
+                    <td>
+                      <div
+                        ref={(el) => (statusRefs.current[job.id] = el)}
+                        className="status-dropdown-trigger"
+                        style={{
+                          backgroundColor: `${statusColors[job.status]}20`,
+                          color: statusColors[job.status],
+                          borderColor: statusColors[job.status],
+                        }}
+                        onClick={() =>
+                          setOpenStatusDropdown(openStatusDropdown === job.id ? null : job.id)
+                        }
+                      >
+                        {job.status}
+                        <ChevronDown size={16} />
+                      </div>
+                    </td>
+
+                    <td>
+                      <input
+                        type="date"
+                        value={job.dateSaved || ""}
+                        onChange={(e) => updateDate(job.id, "dateSaved", e.target.value)}
+                        className="date-input"
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        type="date"
+                        value={job.deadline || ""}
+                        onChange={(e) => updateDate(job.id, "deadline", e.target.value)}
+                        className="date-input"
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        type="date"
+                        value={job.dateApplied || ""}
+                        onChange={(e) => updateDate(job.id, "dateApplied", e.target.value)}
+                        className="date-input"
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        type="date"
+                        value={job.followUp || ""}
+                        onChange={(e) => updateDate(job.id, "followUp", e.target.value)}
+                        className="date-input"
+                      />
+                    </td>
+
+                    <td>
+                      <div className="star-rating">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span
+                            key={star}
+                            className={`star ${star <= job.cookedLevel ? "star-filled" : ""}`}
+                            onClick={() => updateRating(job.id, star)}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    <td>
+                      <div
+                        ref={(el) => (tasksRefs.current[job.id] = el)}
+                        className="tasks-trigger"
+                        onClick={() =>
+                          setOpenTasksDropdown(openTasksDropdown === job.id ? null : job.id)
+                        }
+                      >
+                        Tasks ({job.completedTasks.length}/{job.tasks.length})
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
         {/* Status Dropdown Portal */}
         {openStatusDropdown &&
@@ -613,62 +706,67 @@ export default function Home() {
             document.body
           )}
 
-      {/* Tasks Dropdown Portal */}
-      {openTasksDropdown && createPortal(
-        <>
-          <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
-          <div 
-            className="tasks-dropdown"
-            style={{
-              position: 'absolute',
-              top: tasksDropdownPos.top,
-              left: tasksDropdownPos.left,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="tasks-list">
-              {(() => {
-                const currentJob = getCurrentJob(openTasksDropdown);
-                if (!currentJob || currentJob.tasks.length === 0) {
-                  return <div className="no-tasks">No tasks yet</div>;
-                }
-                return currentJob.tasks.map((task, i) => (
-                  <div key={i} className="task-item">
-                    <label className="task-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={currentJob.completedTasks.includes(task)}
-                        onChange={() => toggleTask(openTasksDropdown, task)}
-                      />
-                      <span className={currentJob.completedTasks.includes(task) ? 'task-completed' : ''}>
-                        {task}
-                      </span>
-                    </label>
-                  </div>
-                ));
-              })()}
-            </div>
-            <div className="add-task">
-              <input
-                type="text"
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addTask(openTasksDropdown);
-                  }
+        {/* Tasks Dropdown Portal */}
+        {openTasksDropdown &&
+          createPortal(
+            <>
+              <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
+              <div
+                className="tasks-dropdown"
+                style={{
+                  position: "absolute",
+                  top: tasksDropdownPos.top,
+                  left: tasksDropdownPos.left,
                 }}
-                placeholder="New task..."
-                className="task-input"
-              />
-              <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
-                Add
-              </button>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="tasks-list">
+                  {(() => {
+                    const currentJob = getCurrentJob(openTasksDropdown);
+                    if (!currentJob || currentJob.tasks.length === 0) {
+                      return <div className="no-tasks">No tasks yet</div>;
+                    }
+                    return currentJob.tasks.map((task, i) => (
+                      <div key={`${task}-${i}`} className="task-item">
+                        <label className="task-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={currentJob.completedTasks.includes(task)}
+                            onChange={() => toggleTask(openTasksDropdown, task)}
+                          />
+                          <span
+                            className={
+                              currentJob.completedTasks.includes(task) ? "task-completed" : ""
+                            }
+                          >
+                            {task}
+                          </span>
+                        </label>
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                <div className="add-task">
+                  <input
+                    type="text"
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addTask(openTasksDropdown);
+                    }}
+                    placeholder="New task..."
+                    className="task-input"
+                  />
+                  <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </>,
+            document.body
+          )}
+      </div>
     </div>
   );
 }
