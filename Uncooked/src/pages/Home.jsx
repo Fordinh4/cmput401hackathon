@@ -71,12 +71,12 @@ const Home = () => {
 
   const statusOptions = ['Applying', 'Applied', 'Interviewing', 'Negotiating', 'Accepted', 'No Response'];
   const statusColors = {
-    'Applying': '#9B59B6',
+    'Applying': '#5A7C8C',
     'Applied': '#BD632F',
     'Interviewing': '#D8973C',
-    'Negotiating': '#E8B55E',
-    'Accepted': '#8FBC8F',
-    'No Response': '#E74C3C'
+    'Negotiating': '#E8A84D',
+    'Accepted': '#5EAA6F', 
+    'No Response': '#C75450'  
   };
 
   // Update dropdown position when opened
