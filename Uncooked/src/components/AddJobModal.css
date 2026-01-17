@@ -158,3 +158,133 @@
   background: #fff;
   color: var(--dr-theme);
 }
+.ajm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+.ajm-modal {
+  width: min(760px, 92vw);
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.ajm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ajm-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ajm-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.ajm-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.ajm-form {
+  padding: 18px;
+}
+
+.ajm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ajm-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #1e2a2f;
+}
+
+.ajm-field span {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.ajm-field input,
+.ajm-field select,
+.ajm-field textarea {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.ajm-field input:focus,
+.ajm-field select:focus,
+.ajm-field textarea:focus {
+  border-color: rgba(216, 151, 60, 0.9);
+  box-shadow: 0 0 0 3px rgba(216, 151, 60, 0.15);
+}
+
+.ajm-span2 {
+  grid-column: span 2;
+}
+
+.ajm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ajm-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ajm-btn-ghost {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.ajm-btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.ajm-btn-primary {
+  background: #bd632f;
+  color: white;
+}
+
+.ajm-btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+@media (max-width: 640px) {
+  .ajm-grid {
+    grid-template-columns: 1fr;
+  }
+  .ajm-span2 {
+    grid-column: auto;
+  }
+}

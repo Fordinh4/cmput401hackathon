@@ -5,13 +5,8 @@ import { Plus, Briefcase, ChevronDown } from "lucide-react";
 import "./Home.css";
 
 export default function Home() {
-  // Modal state (your AddJobModal)
+  // Modal state (AddJobModal)
   const [open, setOpen] = useState(false);
-
-  const handleSave = (job) => {
-    console.log("Saved job:", job);
-    // later: store to Firebase
-  };
 
   const [jobs, setJobs] = useState([
     {
@@ -97,7 +92,35 @@ export default function Home() {
     []
   );
 
-  // Compute status counts (memoized)
+  // ✅ Save from modal -> append into list
+  const handleSave = (jobFromModal) => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Your AddJobModal likely uses: title, company, url, location, description, maxSalary, status, deadline, dateApplied
+    // Map it into your table schema:
+    const newJob = {
+      id: Date.now(),
+      position: jobFromModal.title?.trim() || "New Position",
+      company: jobFromModal.company?.trim() || "Company",
+      url: jobFromModal.url?.trim() || "",
+      description: jobFromModal.description?.trim() || "",
+      maxSalary: Number(jobFromModal.maxSalary || 0),
+      location: jobFromModal.location?.trim() || "TBD",
+      status: jobFromModal.status || "Applying",
+      dateSaved: today,
+      deadline: jobFromModal.deadline || null,
+      dateApplied: jobFromModal.dateApplied || "",
+      followUp: jobFromModal.followUp || null,
+      cookedLevel: 1,
+      tasks: [],
+      completedTasks: [],
+    };
+
+    setJobs((prev) => [newJob, ...prev]);
+    setOpen(false);
+  };
+
+  // Compute status counts
   const statusCounts = useMemo(() => {
     const counts = {};
     statusOptions.forEach((status) => {
@@ -108,12 +131,11 @@ export default function Home() {
 
   const totalJobs = jobs.length;
 
-  // Current dropdown jobs
   const currentStatusJob = openStatusDropdown
     ? jobs.find((j) => j.id === openStatusDropdown)
     : null;
 
-  // Update dropdown position when opened (Status)
+  // Dropdown position (Status)
   useEffect(() => {
     if (openStatusDropdown && statusRefs.current[openStatusDropdown]) {
       const rect = statusRefs.current[openStatusDropdown].getBoundingClientRect();
@@ -124,16 +146,16 @@ export default function Home() {
     }
   }, [openStatusDropdown]);
 
-  // Update dropdown position when opened (Tasks)
+  // Dropdown position (Tasks)
   useEffect(() => {
     if (openTasksDropdown && tasksRefs.current[openTasksDropdown]) {
       const rect = tasksRefs.current[openTasksDropdown].getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const dropdownWidth = 280; // min-width of tasks dropdown
+      const dropdownWidth = 280;
 
       let left = rect.left + window.scrollX;
       if (left + dropdownWidth > viewportWidth) {
-        left = viewportWidth - dropdownWidth - 20; // 20px margin from edge
+        left = viewportWidth - dropdownWidth - 20;
       }
 
       setTasksDropdownPos({
@@ -159,7 +181,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editingCell]);
 
-  // Close dropdowns on scroll/resize (keeps portals from “floating away”)
+  // Close dropdowns on scroll/resize
   useEffect(() => {
     const close = () => {
       setOpenStatusDropdown(null);
@@ -173,27 +195,24 @@ export default function Home() {
     };
   }, []);
 
-  // Sorting: compute sorted list from jobs + sortConfig (do NOT mutate jobs order in state)
+  // Sorting: derive sorted list (don’t mutate state order)
   const sortedJobs = useMemo(() => {
     const key = sortConfig.key;
     const dir = sortConfig.direction;
 
-    const sorted = [...jobs].sort((a, b) => {
+    return [...jobs].sort((a, b) => {
       let aVal = a[key];
       let bVal = b[key];
 
-      // numeric sorts
       if (key === "maxSalary" || key === "cookedLevel") {
         aVal = aVal || 0;
         bVal = bVal || 0;
         return dir === "asc" ? aVal - bVal : bVal - aVal;
       }
 
-      // nulls last
       if (aVal === null || aVal === undefined || aVal === "") return 1;
       if (bVal === null || bVal === undefined || bVal === "") return -1;
 
-      // string compare
       if (typeof aVal === "string") aVal = aVal.toLowerCase();
       if (typeof bVal === "string") bVal = bVal.toLowerCase();
 
@@ -201,16 +220,13 @@ export default function Home() {
       if (aVal > bVal) return dir === "asc" ? 1 : -1;
       return 0;
     });
-
-    return sorted;
   }, [jobs, sortConfig]);
 
   const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+    setSortConfig((prev) => {
+      const nextDir = prev.key === key && prev.direction === "asc" ? "desc" : "asc";
+      return { key, direction: nextDir };
+    });
   };
 
   // Inline editing
@@ -220,13 +236,10 @@ export default function Home() {
   };
 
   const saveEdit = (jobId, field) => {
-    setJobs(
-      jobs.map((job) =>
+    setJobs((prev) =>
+      prev.map((job) =>
         job.id === jobId
-          ? {
-              ...job,
-              [field]: field === "maxSalary" ? Number(editValue || 0) : editValue,
-            }
+          ? { ...job, [field]: field === "maxSalary" ? Number(editValue || 0) : editValue }
           : job
       )
     );
@@ -241,79 +254,57 @@ export default function Home() {
 
   // Status change
   const updateStatus = (jobId, newStatus) => {
-    setJobs(jobs.map((job) => (job.id === jobId ? { ...job, status: newStatus } : job)));
+    setJobs((prev) => prev.map((job) => (job.id === jobId ? { ...job, status: newStatus } : job)));
     setOpenStatusDropdown(null);
   };
 
   // Date updates
   const updateDate = (jobId, field, value) => {
-    setJobs(jobs.map((job) => (job.id === jobId ? { ...job, [field]: value || null } : job)));
+    setJobs((prev) =>
+      prev.map((job) => (job.id === jobId ? { ...job, [field]: value || null } : job))
+    );
   };
 
   // Star rating
   const updateRating = (jobId, rating) => {
-    setJobs(jobs.map((job) => (job.id === jobId ? { ...job, cookedLevel: rating } : job)));
+    setJobs((prev) =>
+      prev.map((job) => (job.id === jobId ? { ...job, cookedLevel: rating } : job))
+    );
   };
 
   // Task management
   const toggleTask = (jobId, task) => {
-    setJobs(
-      jobs.map((job) => {
-        if (job.id === jobId) {
-          const isCompleted = job.completedTasks.includes(task);
-          return {
-            ...job,
-            completedTasks: isCompleted
-              ? job.completedTasks.filter((t) => t !== task)
-              : [...job.completedTasks, task],
-          };
-        }
-        return job;
+    setJobs((prev) =>
+      prev.map((job) => {
+        if (job.id !== jobId) return job;
+        const isCompleted = job.completedTasks.includes(task);
+        return {
+          ...job,
+          completedTasks: isCompleted
+            ? job.completedTasks.filter((t) => t !== task)
+            : [...job.completedTasks, task],
+        };
       })
     );
   };
 
   const addTask = (jobId) => {
     if (!jobId) return;
-    if (newTask.trim()) {
-      setJobs(
-        jobs.map((job) =>
-          job.id === jobId ? { ...job, tasks: [...job.tasks, newTask.trim()] } : job
-        )
-      );
-      setNewTask("");
-    }
+    if (!newTask.trim()) return;
+
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId ? { ...job, tasks: [...job.tasks, newTask.trim()] } : job
+      )
+    );
+    setNewTask("");
   };
 
   const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
 
-  const addNewJob = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const newJob = {
-      id: Date.now(),
-      position: "New Position",
-      company: "Company Name",
-      url: "",
-      description: "",
-      maxSalary: 0,
-      location: "TBD",
-      status: "Applying",
-      dateSaved: today,
-      deadline: null,
-      dateApplied: "",
-      cookedLevel: 1,
-      followUp: null,
-      tasks: [],
-      completedTasks: [],
-    };
-    setJobs([newJob, ...jobs]);
-  };
-
   return (
     <div className="app-shell">
-      {/* Simple button (kept from your original) */}
-      <button onClick={() => setOpen(true)}>+ Add Job</button>
-
+      {/* ✅ Only one add button now (the header one) */}
       <AddJobModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSave} />
 
       <div className="app-container">
@@ -324,7 +315,9 @@ export default function Home() {
               <Briefcase className="header-icon" />
               <h1>Job Application Tracker</h1>
             </div>
-            <button className="add-job-btn" onClick={addNewJob}>
+
+            {/* ✅ This is now the real Add Job button */}
+            <button className="add-job-btn" onClick={() => setOpen(true)}>
               <Plus size={20} />
               Add New Job
             </button>
@@ -392,6 +385,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("company")}
                     className={sortConfig.key === "company" ? "sorted-column" : ""}
@@ -403,6 +397,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("maxSalary")}
                     className={sortConfig.key === "maxSalary" ? "sorted-column" : ""}
@@ -414,6 +409,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("location")}
                     className={sortConfig.key === "location" ? "sorted-column" : ""}
@@ -425,6 +421,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("status")}
                     className={sortConfig.key === "status" ? "sorted-column" : ""}
@@ -436,6 +433,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("dateSaved")}
                     className={sortConfig.key === "dateSaved" ? "sorted-column" : ""}
@@ -447,6 +445,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("deadline")}
                     className={sortConfig.key === "deadline" ? "sorted-column" : ""}
@@ -458,6 +457,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("dateApplied")}
                     className={sortConfig.key === "dateApplied" ? "sorted-column" : ""}
@@ -469,6 +469,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("followUp")}
                     className={sortConfig.key === "followUp" ? "sorted-column" : ""}
@@ -480,6 +481,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th
                     onClick={() => handleSort("cookedLevel")}
                     className={sortConfig.key === "cookedLevel" ? "sorted-column" : ""}
@@ -491,6 +493,7 @@ export default function Home() {
                       </span>
                     )}
                   </th>
+
                   <th>Tasks</th>
                 </tr>
               </thead>
@@ -679,11 +682,7 @@ export default function Home() {
               <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
               <div
                 className="status-dropdown"
-                style={{
-                  position: "absolute",
-                  top: dropdownPos.top,
-                  left: dropdownPos.left,
-                }}
+                style={{ position: "absolute", top: dropdownPos.top, left: dropdownPos.left }}
               >
                 {statusOptions.map((status) => (
                   <div

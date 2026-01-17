@@ -1,30 +1,39 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import "./AddJobModal.css";
 
 const STATUS_OPTIONS = [
-  "Not applied",
+  "Applying",
   "Applied",
-  "Viewed",
   "Interviewing",
-  "Offer",
-  "Hired",
-  "Rejected",
+  "Negotiating",
+  "Accepted",
+  "No Response",
 ];
 
 export default function AddJobModal({ isOpen, onClose, onSave }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const [form, setForm] = useState({
-    title: "",
-    url: "",
-    company: "",
-    location: "",
-    description: "",
-    maxSalary: "",
-    status: "Not applied",
-    deadline: "",
-    dateApplied: today,
-  });
+  const initialForm = useMemo(
+    () => ({
+      title: "",
+      url: "",
+      company: "",
+      location: "",
+      description: "",
+      maxSalary: "",
+      status: "Applying",
+      deadline: "",
+      dateApplied: today,
+      followUp: "",
+    }),
+    [today]
+  );
+
+  const [form, setForm] = useState(initialForm);
+
+  useEffect(() => {
+    if (!isOpen) setForm(initialForm);
+  }, [isOpen, initialForm]);
 
   if (!isOpen) return null;
 
@@ -34,152 +43,101 @@ export default function AddJobModal({ isOpen, onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // basic "required" check, keep it simple
-    if (!form.title.trim() || !form.company.trim()) return;
-
-    const payload = {
+    onSave?.({
       ...form,
-      maxSalary: form.maxSalary === "" ? null : Number(form.maxSalary),
-      createdAt: new Date().toISOString(),
-    };
+      maxSalary: form.maxSalary ? Number(form.maxSalary) : 0,
+      deadline: form.deadline || null,
+      followUp: form.followUp || null,
+    });
 
-    onSave?.(payload);
     onClose?.();
+    setForm(initialForm);
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) onClose?.();
+  const handleClose = () => {
+    onClose?.();
+    setForm(initialForm);
   };
 
   return (
-    <div className="modal-backdrop" onMouseDown={handleBackdropClick}>
-      <div className="modal" role="dialog" aria-modal="true">
+    <div className="ajm-overlay" onClick={handleClose}>
+      <div className="ajm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ajm-header">
+          <h2 className="ajm-title">Add a Job</h2>
+          <button className="ajm-close" onClick={handleClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
 
-        <h1 className="modal-title">Add a New Job Post</h1>
+        <form className="ajm-form" onSubmit={handleSubmit}>
+          <div className="ajm-grid">
+            <label className="ajm-field">
+              <span>Title</span>
+              <input value={form.title} onChange={setField("title")} required />
+            </label>
 
-        <form className="form" onSubmit={handleSubmit}>
-          <div className="field">
-            <label className="label">Job Title *</label>
-            <input
-              className="input"
-              placeholder="e.g., Software Engineer Intern"
-              value={form.title}
-              onChange={setField("title")}
-              required
-            />
-          </div>
+            <label className="ajm-field">
+              <span>Company</span>
+              <input value={form.company} onChange={setField("company")} required />
+            </label>
 
-          <div className="field">
-            <label className="label">URL for Original Posting</label>
-            <input
-              className="input"
-              placeholder="https://..."
-              value={form.url}
-              onChange={setField("url")}
-              type="url"
-            />
-          </div>
+            <label className="ajm-field">
+              <span>Location</span>
+              <input value={form.location} onChange={setField("location")} />
+            </label>
 
-          <div className="field">
-            <label className="label">Company Name *</label>
-            <input
-              className="input"
-              placeholder="e.g., Microsoft"
-              value={form.company}
-              onChange={setField("company")}
-              required
-            />
-          </div>
-
-          <div className="two-col">
-            <div className="field">
-              <label className="label">Location</label>
+            <label className="ajm-field">
+              <span>Max Salary</span>
               <input
-                className="input"
-                placeholder="e.g., Edmonton / Remote"
-                value={form.location}
-                onChange={setField("location")}
-              />
-            </div>
-
-            <div className="field">
-              <label className="label">Max Salary</label>
-              <input
-                className="input"
-                placeholder="e.g., 85000"
+                type="number"
                 value={form.maxSalary}
                 onChange={setField("maxSalary")}
-                type="number"
                 min="0"
-                step="0.01"
               />
-            </div>
-          </div>
+            </label>
 
-        <div className="field">
-            <label className="label">Status</label>
-            <select className="input" value={form.status} onChange={setField("status")}>
+            <label className="ajm-field">
+              <span>Status</span>
+              <select value={form.status} onChange={setField("status")}>
                 {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
+                  <option key={s} value={s}>
                     {s}
-                </option>
+                  </option>
                 ))}
-            </select>
-        </div>
+              </select>
+            </label>
 
+            <label className="ajm-field">
+              <span>Date Applied</span>
+              <input type="date" value={form.dateApplied} onChange={setField("dateApplied")} />
+            </label>
 
-        <div className="two-col">
-            <div className="field">
-                <label className="label">Deadline</label>
-                <input
-                    className="input date-button"
-                    type="date"
-                    value={form.deadline}
-                    onChange={setField("deadline")}
-                    onKeyDown={(e) => e.preventDefault()}  // blocks typing
-                    onPaste={(e) => e.preventDefault()}   // blocks paste
-                    onClick={(e) => e.currentTarget.showPicker?.()} // opens on click
-                    onFocus={(e) => e.currentTarget.showPicker?.()} // opens on focus
-                    inputMode="none"
-                />
+            <label className="ajm-field">
+              <span>Deadline</span>
+              <input type="date" value={form.deadline || ""} onChange={setField("deadline")} />
+            </label>
 
-            </div>
+            <label className="ajm-field">
+              <span>Follow Up</span>
+              <input type="date" value={form.followUp || ""} onChange={setField("followUp")} />
+            </label>
 
-            <div className="field">
-                <label className="label">Date Applied</label>
-                <input
-                    className="input date-button"
-                    type="date"
-                    value={form.dateApplied}
-                    onChange={setField("dateApplied")}
-                    onKeyDown={(e) => e.preventDefault()}
-                    onPaste={(e) => e.preventDefault()}
-                    onClick={(e) => e.currentTarget.showPicker?.()}
-                    onFocus={(e) => e.currentTarget.showPicker?.()}
-                    inputMode="none"
-                />
+            <label className="ajm-field ajm-span2">
+              <span>URL</span>
+              <input value={form.url} onChange={setField("url")} placeholder="https://..." />
+            </label>
 
-
-            </div>
-        </div>
-
-
-          <div className="field">
-            <label className="label">Job Description</label>
-            <textarea
-              className="textarea"
-              placeholder="Paste the job description here..."
-              value={form.description}
-              onChange={setField("description")}
-              rows={8}
-            />
+            <label className="ajm-field ajm-span2">
+              <span>Description</span>
+              <textarea value={form.description} onChange={setField("description")} rows={4} />
+            </label>
           </div>
 
-          <div className="actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <div className="ajm-actions">
+            <button type="button" className="ajm-btn ajm-btn-ghost" onClick={handleClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="ajm-btn ajm-btn-primary">
               Save Job
             </button>
           </div>
