@@ -191,7 +191,7 @@ def calculate_cooked_level(ai_suggested: str, current_content: str) -> int:
     Higher = more cooked = over-processed = bad.
     
     Args:
-        ai_suggested: The AI-suggested LaTeX content
+        ai_suggested: The AI-suggested content
         current_content: The current user-edited content
     
     Returns:
@@ -214,13 +214,13 @@ def calculate_cooked_level(ai_suggested: str, current_content: str) -> int:
 calculate_coolness_level = calculate_cooked_level
 
 
-def check_relevant_experience(master_latex: str, job_description: str) -> dict:
+def check_relevant_experience(master_html: str, job_description: str) -> dict:
     """
     Check if the master resume has relevant experience/projects for the job.
     Returns a dict with has_relevant_experience and suggestions if needed.
     
     Args:
-        master_latex: The master resume in LaTeX format
+        master_html: The master resume in HTML format
         job_description: The job description to check against
     
     Returns:
@@ -233,8 +233,8 @@ def check_relevant_experience(master_latex: str, job_description: str) -> dict:
 Determine if the candidate has ANY relevant experience or projects that could apply to this job.
 Be lenient - even tangentially related experience counts.
 
-Master Resume (LaTeX):
-{master_latex}
+Master Resume:
+{master_html}
 
 Job Description:
 {job_description}
@@ -263,7 +263,7 @@ No other text, just the JSON."""
         
         if not result.get('has_relevant_experience', True):
             # Generate project suggestions
-            suggestions = generate_project_suggestions(master_latex, job_description)
+            suggestions = generate_project_suggestions(master_html, job_description)
             return {
                 'has_relevant_experience': False,
                 'reason': result.get('reason', 'No relevant experience found'),
@@ -283,12 +283,12 @@ No other text, just the JSON."""
         }
 
 
-def generate_project_suggestions(master_latex: str, job_description: str) -> list:
+def generate_project_suggestions(master_html: str, job_description: str) -> list:
     """
     Generate project suggestions that would help build relevant experience.
     
     Args:
-        master_latex: The master resume in LaTeX format
+        master_html: The master resume in HTML format
         job_description: The job description
     
     Returns:
@@ -304,7 +304,7 @@ Projects should:
 - Not be too complex or require unrealistic resources
 
 Candidate's Current Skills (from resume):
-{master_latex}
+{master_html}
 
 Target Job:
 {job_description}

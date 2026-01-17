@@ -9,9 +9,6 @@ from .serializers import (
     TailoredResumeSerializer, TailoredResumeUpdateSerializer
 )
 from .services import analyze_resume_for_job, recheck_resume_improvements, check_relevant_experience
-import subprocess
-import tempfile
-import os
 
 
 def hello(request):
@@ -82,8 +79,8 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Use HTML content if available, fall back to LaTeX for legacy
-            resume_content = master_resume.html_content or master_resume.latex_content
+            # Use HTML content
+            resume_content = master_resume.html_content
             
             # Analyze resume and get suggestions
             analysis = analyze_resume_for_job(
@@ -97,7 +94,6 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                 master_resume=master_resume,
                 job_application=job,
                 current_html=master_resume.html_content,  # Start with master HTML
-                current_latex=master_resume.latex_content,  # Keep for legacy
                 initial_cookedness_score=analysis.get('cookedness_score', 100),
                 current_cookedness_score=analysis.get('cookedness_score', 100),
                 ai_suggestions=analysis.get('suggestions', []),
@@ -128,9 +124,6 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
             # Update HTML content
             if 'current_html' in serializer.validated_data:
                 tailored_resume.current_html = serializer.validated_data['current_html']
-            # Legacy: also update latex if provided
-            if 'current_latex' in serializer.validated_data:
-                tailored_resume.current_latex = serializer.validated_data['current_latex']
             tailored_resume.save()
             
             return Response(TailoredResumeSerializer(tailored_resume).data)
@@ -150,10 +143,10 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                 # Use the stored full content from last check, not the snippet
                 previous_content = improvement_history[-1].get('full_html_snapshot', tailored_resume.master_resume.html_content)
             else:
-                previous_content = tailored_resume.master_resume.html_content or tailored_resume.master_resume.latex_content
+                previous_content = tailored_resume.master_resume.html_content
             
             # Use HTML content
-            current_content = tailored_resume.current_html or tailored_resume.current_latex
+            current_content = tailored_resume.current_html
             
             # If content hasn't changed since last check, don't re-evaluate
             if previous_content == current_content:
@@ -211,8 +204,8 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
             from weasyprint import HTML, CSS
             from io import BytesIO
             
-            # Use HTML content, fallback to LaTeX if needed
-            html_content = tailored_resume.current_html or tailored_resume.current_latex
+            # Use HTML content
+            html_content = tailored_resume.current_html
             
             # Wrap HTML in a styled document for professional resume look
             full_html = f"""<!DOCTYPE html>
@@ -261,55 +254,3 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @action(detail=True, methods=['get'])
-    def compile_ai_pdf(self, request, pk=None):
-        """Compile AI version to PDF"""
-        tailored_resume = self.get_object()
-        
-        try:
-            # Create temporary directory
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tex_file = os.path.join(tmpdir, 'resume.tex')
-                pdf_file = os.path.join(tmpdir, 'resume.pdf')
-                
-                # Write AI suggested LaTeX content to file
-                with open(tex_file, 'w') as f:
-                    f.write(tailored_resume.ai_suggested_latex)
-                
-                # Compile using pdflatex
-                result = subprocess.run(
-                    ['pdflatex', '-interaction=nonstopmode', '-output-directory', tmpdir, tex_file],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                
-                if not os.path.exists(pdf_file):
-                    return Response(
-                        {'error': 'PDF compilation failed', 'details': result.stderr},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-                
-                # Read PDF and return as response
-                with open(pdf_file, 'rb') as f:
-                    pdf_content = f.read()
-                
-                response = HttpResponse(pdf_content, content_type='application/pdf')
-                response['Content-Disposition'] = f'attachment; filename="resume_AI_{tailored_resume.job_application.position}.pdf"'
-                return response
-        
-        except subprocess.TimeoutExpired:
-            return Response(
-                {'error': 'PDF compilation timed out'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        except FileNotFoundError:
-            return Response(
-                {'error': 'pdflatex not found. Please install LaTeX on the server.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        except Exception as e:
-            return Response(
-                {'error': f'Compilation failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )

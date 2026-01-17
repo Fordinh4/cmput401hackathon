@@ -25,7 +25,7 @@ function MasterResumeEditor() {
       const data = await response.json();
       setResumeId(data.id);
       setName(data.name);
-      setHtmlContent(data.html_content || data.latex_content || getDefaultHtml());
+      setHtmlContent(data.html_content || getDefaultHtml());
     } catch (error) {
       console.error('Error fetching master resume:', error);
       setHtmlContent(getDefaultHtml());

@@ -5,10 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class MasterResume(models.Model):
     """Stores the user's master resume"""
     name = models.CharField(max_length=255, default="Master Resume")
-    # New: HTML content for rich text editor
     html_content = models.TextField(help_text="HTML resume content from rich text editor", blank=True, default="")
-    # Legacy: Keep LaTeX for backwards compatibility
-    latex_content = models.TextField(help_text="Complete LaTeX resume content", blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -46,14 +43,9 @@ class TailoredResume(models.Model):
     master_resume = models.ForeignKey(MasterResume, on_delete=models.CASCADE, related_name='tailored_versions')
     job_application = models.ForeignKey(JobApplication, on_delete=models.CASCADE, related_name='tailored_resumes')
     
-    # New: HTML content for rich text editor
     current_html = models.TextField(help_text="Current HTML resume content", default="")
     
-    # Legacy fields - kept for backwards compatibility
-    ai_suggested_latex = models.TextField(help_text="AI-generated LaTeX content", blank=True, default="")
-    current_latex = models.TextField(help_text="Current user-edited LaTeX content", blank=True, default="")
-    
-    # New suggestion-based fields
+    # Suggestion-based fields
     initial_cookedness_score = models.IntegerField(
         default=100,
         validators=[MinValueValidator(0), MaxValueValidator(100)],

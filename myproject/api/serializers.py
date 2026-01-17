@@ -5,7 +5,7 @@ from .models import MasterResume, JobApplication, TailoredResume, ResumeSection
 class MasterResumeSerializer(serializers.ModelSerializer):
     class Meta:
         model = MasterResume
-        fields = ['id', 'name', 'html_content', 'latex_content', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'html_content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -38,12 +38,10 @@ class TailoredResumeSerializer(serializers.ModelSerializer):
         model = TailoredResume
         fields = [
             'id', 'master_resume', 'job_application', 
-            'current_html', 'current_latex', 'cooked_level',
+            'current_html', 'cooked_level',
             'initial_cookedness_score', 'current_cookedness_score',
             'ai_suggestions', 'improvement_history',
-            'created_at', 'updated_at', 'sections',
-            # Legacy fields
-            'ai_suggested_latex'
+            'created_at', 'updated_at', 'sections'
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'cooked_level',
@@ -56,4 +54,4 @@ class TailoredResumeUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating tailored resume content"""
     class Meta:
         model = TailoredResume
-        fields = ['current_html', 'current_latex']
+        fields = ['current_html']

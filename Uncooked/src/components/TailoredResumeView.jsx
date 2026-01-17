@@ -27,7 +27,7 @@ function TailoredResumeView() {
       const response = await fetch(`${API_BASE}/resume/tailored/${id}/`);
       const data = await response.json();
       setTailoredResume(data);
-      setCurrentHtml(data.current_html || data.current_latex || '');
+      setCurrentHtml(data.current_html || '');
     } catch (error) {
       console.error('Error fetching tailored resume:', error);
     } finally {
