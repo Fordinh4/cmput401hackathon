@@ -42,7 +42,7 @@
 ### Frontend (Vite + React)
 1. Navigate to the frontend folder:
 ```bash
-   cd my-frontend
+   cd Uncooked
 ```
 
 2. Install dependencies:
