@@ -71,26 +71,20 @@ export default function Home() {
 
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
-
+  const [selectedJobs, setSelectedJobs] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const statusRefs = useRef({});
   const tasksRefs = useRef({});
 
-  const statusOptions = useMemo(
-    () => ["Applying", "Applied", "Interviewing", "Negotiating", "Accepted", "No Response"],
-    []
-  );
-
-  const statusColors = useMemo(
-    () => ({
-      Applying: "#9B59B6",
-      Applied: "#BD632F",
-      Interviewing: "#D8973C",
-      Negotiating: "#E8B55E",
-      Accepted: "#8FBC8F",
-      "No Response": "#E74C3C",
-    }),
-    []
-  );
+  const statusOptions = ['Applying', 'Applied', 'Interviewing', 'Negotiating', 'Accepted', 'No Response'];
+  const statusColors = {
+    'Applying': '#5A7C8C',      // Muted teal-blue (starting phase)
+    'Applied': '#BD632F',       // Your secondary brown (submitted)
+    'Interviewing': '#D8973C',  // Your primary gold (active phase)
+    'Negotiating': '#E8A84D',   // Bright gold (exciting phase)
+    'Accepted': '#5EAA6F',      // Success green (achievement)
+    'No Response': '#C75450'    // Softer red (rejection/no response)
+  };
 
   // ✅ Save from modal -> append into list
   const handleSave = (jobFromModal) => {
@@ -300,7 +294,64 @@ export default function Home() {
     setNewTask("");
   };
 
-  const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
+  const getCurrentJob = (jobId) => {
+    return jobs.find(j => j.id === jobId);
+  };
+
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedJobs.length === jobs.length) {
+      setSelectedJobs([]);
+    } else {
+      setSelectedJobs(jobs.map(job => job.id));
+    }
+  };
+
+  const toggleSelectJob = (jobId) => {
+    if (selectedJobs.includes(jobId)) {
+      setSelectedJobs(selectedJobs.filter(id => id !== jobId));
+    } else {
+      setSelectedJobs([...selectedJobs, jobId]);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setJobs(jobs.filter(job => !selectedJobs.includes(job.id)));
+    setSelectedJobs([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const addNewJob = () => {
+    const newJob = {
+      id: Date.now(),
+      position: "New Position",
+      company: "Company Name",
+      url: "",
+      description: "",
+      maxSalary: 0,
+      location: "TBD",
+      status: "Applying",
+      dateSaved: new Date().toISOString().split('T')[0],
+      deadline: null,
+      dateApplied: "",
+      cookedLevel: 1,
+      followUp: null,
+      tasks: [],
+      completedTasks: []
+    };
+    setJobs([newJob, ...jobs]);
+  };
+
+  const statusCounts = getStatusCounts();
+  const totalJobs = jobs.length;
 
   return (
     <div className="app-shell">
@@ -368,312 +419,236 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="table-container">
-          <div className="table-wrapper">
-            <table className="jobs-table">
-              <thead>
-                <tr>
-                  <th
-                    onClick={() => handleSort("position")}
-                    className={sortConfig.key === "position" ? "sorted-column" : ""}
-                  >
-                    Position{" "}
-                    {sortConfig.key === "position" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("company")}
-                    className={sortConfig.key === "company" ? "sorted-column" : ""}
-                  >
-                    Company{" "}
-                    {sortConfig.key === "company" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("maxSalary")}
-                    className={sortConfig.key === "maxSalary" ? "sorted-column" : ""}
-                  >
-                    Max Salary{" "}
-                    {sortConfig.key === "maxSalary" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("location")}
-                    className={sortConfig.key === "location" ? "sorted-column" : ""}
-                  >
-                    Location{" "}
-                    {sortConfig.key === "location" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("status")}
-                    className={sortConfig.key === "status" ? "sorted-column" : ""}
-                  >
-                    Status{" "}
-                    {sortConfig.key === "status" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("dateSaved")}
-                    className={sortConfig.key === "dateSaved" ? "sorted-column" : ""}
-                  >
-                    Date Saved{" "}
-                    {sortConfig.key === "dateSaved" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("deadline")}
-                    className={sortConfig.key === "deadline" ? "sorted-column" : ""}
-                  >
-                    Deadline{" "}
-                    {sortConfig.key === "deadline" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("dateApplied")}
-                    className={sortConfig.key === "dateApplied" ? "sorted-column" : ""}
-                  >
-                    Date Applied{" "}
-                    {sortConfig.key === "dateApplied" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("followUp")}
-                    className={sortConfig.key === "followUp" ? "sorted-column" : ""}
-                  >
-                    Follow Up{" "}
-                    {sortConfig.key === "followUp" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th
-                    onClick={() => handleSort("cookedLevel")}
-                    className={sortConfig.key === "cookedLevel" ? "sorted-column" : ""}
-                  >
-                    Cooked Level{" "}
-                    {sortConfig.key === "cookedLevel" && (
-                      <span className="sort-indicator">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-
-                  <th>Tasks</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sortedJobs.map((job) => (
-                  <tr key={job.id}>
-                    <td
-                      className="editable-cell"
-                      onClick={() => !editingCell && startEdit(job.id, "position", job.position)}
-                    >
-                      {editingCell?.jobId === job.id && editingCell?.field === "position" ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(job.id, "position")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveEdit(job.id, "position");
-                            if (e.key === "Escape") cancelEdit();
-                          }}
-                          autoFocus
-                          className="edit-input"
-                        />
-                      ) : (
-                        job.position
-                      )}
-                    </td>
-
-                    <td
-                      className="editable-cell"
-                      onClick={() => !editingCell && startEdit(job.id, "company", job.company)}
-                    >
-                      {editingCell?.jobId === job.id && editingCell?.field === "company" ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(job.id, "company")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveEdit(job.id, "company");
-                            if (e.key === "Escape") cancelEdit();
-                          }}
-                          autoFocus
-                          className="edit-input"
-                        />
-                      ) : (
-                        job.company
-                      )}
-                    </td>
-
-                    <td
-                      className="editable-cell"
-                      onClick={() => !editingCell && startEdit(job.id, "maxSalary", job.maxSalary)}
-                    >
-                      {editingCell?.jobId === job.id && editingCell?.field === "maxSalary" ? (
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(job.id, "maxSalary")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveEdit(job.id, "maxSalary");
-                            if (e.key === "Escape") cancelEdit();
-                          }}
-                          autoFocus
-                          className="edit-input"
-                        />
-                      ) : (
-                        `$${Number(job.maxSalary || 0).toLocaleString()}`
-                      )}
-                    </td>
-
-                    <td
-                      className="editable-cell"
-                      onClick={() => !editingCell && startEdit(job.id, "location", job.location)}
-                    >
-                      {editingCell?.jobId === job.id && editingCell?.field === "location" ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(job.id, "location")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveEdit(job.id, "location");
-                            if (e.key === "Escape") cancelEdit();
-                          }}
-                          autoFocus
-                          className="edit-input"
-                        />
-                      ) : (
-                        job.location
-                      )}
-                    </td>
-
-                    <td>
-                      <div
-                        ref={(el) => (statusRefs.current[job.id] = el)}
-                        className="status-dropdown-trigger"
-                        style={{
-                          backgroundColor: `${statusColors[job.status]}20`,
-                          color: statusColors[job.status],
-                          borderColor: statusColors[job.status],
-                        }}
-                        onClick={() =>
-                          setOpenStatusDropdown(openStatusDropdown === job.id ? null : job.id)
-                        }
-                      >
-                        {job.status}
-                        <ChevronDown size={16} />
-                      </div>
-                    </td>
-
-                    <td>
-                      <input
-                        type="date"
-                        value={job.dateSaved || ""}
-                        onChange={(e) => updateDate(job.id, "dateSaved", e.target.value)}
-                        className="date-input"
-                      />
-                    </td>
-
-                    <td>
-                      <input
-                        type="date"
-                        value={job.deadline || ""}
-                        onChange={(e) => updateDate(job.id, "deadline", e.target.value)}
-                        className="date-input"
-                      />
-                    </td>
-
-                    <td>
-                      <input
-                        type="date"
-                        value={job.dateApplied || ""}
-                        onChange={(e) => updateDate(job.id, "dateApplied", e.target.value)}
-                        className="date-input"
-                      />
-                    </td>
-
-                    <td>
-                      <input
-                        type="date"
-                        value={job.followUp || ""}
-                        onChange={(e) => updateDate(job.id, "followUp", e.target.value)}
-                        className="date-input"
-                      />
-                    </td>
-
-                    <td>
-                      <div className="star-rating">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span
-                            key={star}
-                            className={`star ${star <= job.cookedLevel ? "star-filled" : ""}`}
-                            onClick={() => updateRating(job.id, star)}
-                          >
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-
-                    <td>
-                      <div
-                        ref={(el) => (tasksRefs.current[job.id] = el)}
-                        className="tasks-trigger"
-                        onClick={() =>
-                          setOpenTasksDropdown(openTasksDropdown === job.id ? null : job.id)
-                        }
-                      >
-                        Tasks ({job.completedTasks.length}/{job.tasks.length})
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Table */}
+      <div className="table-container">
+        {/* Action Bar - Shows when items are selected */}
+        {selectedJobs.length > 0 && (
+          <div className="action-bar">
+            <div className="action-bar-content">
+              <span className="selected-count">{selectedJobs.length} selected</span>
+              <button className="delete-btn" onClick={handleDeleteSelected}>
+                <X size={18} />
+                Delete Selected
+              </button>
+            </div>
           </div>
+        )}
+
+        <div className="table-wrapper">
+          <table className="jobs-table">
+            <thead>
+              <tr>
+                <th style={{ width: '50px' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedJobs.length === jobs.length && jobs.length > 0}
+                    onChange={toggleSelectAll}
+                    className="select-checkbox"
+                  />
+                </th>
+                <th onClick={() => handleSort('position')} className={sortConfig.key === 'position' ? 'sorted-column' : ''}>
+                  Position {sortConfig.key === 'position' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('company')} className={sortConfig.key === 'company' ? 'sorted-column' : ''}>
+                  Company {sortConfig.key === 'company' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('maxSalary')} className={sortConfig.key === 'maxSalary' ? 'sorted-column' : ''}>
+                  Max Salary {sortConfig.key === 'maxSalary' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('location')} className={sortConfig.key === 'location' ? 'sorted-column' : ''}>
+                  Location {sortConfig.key === 'location' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('status')} className={sortConfig.key === 'status' ? 'sorted-column' : ''}>
+                  Status {sortConfig.key === 'status' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('dateSaved')} className={sortConfig.key === 'dateSaved' ? 'sorted-column' : ''}>
+                  Date Saved {sortConfig.key === 'dateSaved' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('deadline')} className={sortConfig.key === 'deadline' ? 'sorted-column' : ''}>
+                  Deadline {sortConfig.key === 'deadline' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('dateApplied')} className={sortConfig.key === 'dateApplied' ? 'sorted-column' : ''}>
+                  Date Applied {sortConfig.key === 'dateApplied' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('followUp')} className={sortConfig.key === 'followUp' ? 'sorted-column' : ''}>
+                  Follow Up {sortConfig.key === 'followUp' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th onClick={() => handleSort('cookedLevel')} className={sortConfig.key === 'cookedLevel' ? 'sorted-column' : ''}>
+                  Cooked Level {sortConfig.key === 'cookedLevel' && <span className="sort-indicator">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                </th>
+                <th>Tasks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobs.map((job, index) => (
+                <tr key={job.id} className={selectedJobs.includes(job.id) ? 'selected-row' : ''}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedJobs.includes(job.id)}
+                      onChange={() => toggleSelectJob(job.id)}
+                      className="select-checkbox"
+                    />
+                  </td>
+                  <td 
+                    className="editable-cell"
+                    onClick={() => !editingCell && startEdit(job.id, 'position', job.position)}
+                  >
+                    {editingCell?.jobId === job.id && editingCell?.field === 'position' ? (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(job.id, 'position')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(job.id, 'position');
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        autoFocus
+                        className="edit-input"
+                      />
+                    ) : (
+                      job.position
+                    )}
+                  </td>
+                  <td 
+                    className="editable-cell"
+                    onClick={() => !editingCell && startEdit(job.id, 'company', job.company)}
+                  >
+                    {editingCell?.jobId === job.id && editingCell?.field === 'company' ? (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(job.id, 'company')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(job.id, 'company');
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        autoFocus
+                        className="edit-input"
+                      />
+                    ) : (
+                      job.company
+                    )}
+                  </td>
+                  <td 
+                    className="editable-cell"
+                    onClick={() => !editingCell && startEdit(job.id, 'maxSalary', job.maxSalary)}
+                  >
+                    {editingCell?.jobId === job.id && editingCell?.field === 'maxSalary' ? (
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(job.id, 'maxSalary')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(job.id, 'maxSalary');
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        autoFocus
+                        className="edit-input"
+                      />
+                    ) : (
+                      `$${job.maxSalary.toLocaleString()}`
+                    )}
+                  </td>
+                  <td 
+                    className="editable-cell"
+                    onClick={() => !editingCell && startEdit(job.id, 'location', job.location)}
+                  >
+                    {editingCell?.jobId === job.id && editingCell?.field === 'location' ? (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(job.id, 'location')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(job.id, 'location');
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        autoFocus
+                        className="edit-input"
+                      />
+                    ) : (
+                      job.location
+                    )}
+                  </td>
+                  <td>
+                    <div 
+                      ref={(el) => (statusRefs.current[job.id] = el)}
+                      className="status-dropdown-trigger"
+                      style={{ 
+                        backgroundColor: `${statusColors[job.status]}20`,
+                        color: statusColors[job.status],
+                        borderColor: statusColors[job.status]
+                      }}
+                      onClick={() => setOpenStatusDropdown(openStatusDropdown === job.id ? null : job.id)}
+                    >
+                      {job.status}
+                      <ChevronDown size={16} />
+                    </div>
+                  </td>
+                  <td>
+                    <input
+                      type="date"
+                      value={job.dateSaved || ''}
+                      onChange={(e) => updateDate(job.id, 'dateSaved', e.target.value)}
+                      className="date-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="date"
+                      value={job.deadline || ''}
+                      onChange={(e) => updateDate(job.id, 'deadline', e.target.value)}
+                      className="date-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="date"
+                      value={job.dateApplied || ''}
+                      onChange={(e) => updateDate(job.id, 'dateApplied', e.target.value)}
+                      className="date-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="date"
+                      value={job.followUp || ''}
+                      onChange={(e) => updateDate(job.id, 'followUp', e.target.value)}
+                      className="date-input"
+                    />
+                  </td>
+                  <td>
+                    <div className="star-rating">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <span
+                          key={star}
+                          className={`star ${star <= job.cookedLevel ? 'star-filled' : ''}`}
+                          onClick={() => updateRating(job.id, star)}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <div
+                      ref={(el) => (tasksRefs.current[job.id] = el)}
+                      className="tasks-trigger"
+                      onClick={() => setOpenTasksDropdown(openTasksDropdown === job.id ? null : job.id)}
+                    >
+                      Tasks ({job.completedTasks.length}/{job.tasks.length})
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      </div>
 
         {/* Status Dropdown Portal */}
         {openStatusDropdown &&
