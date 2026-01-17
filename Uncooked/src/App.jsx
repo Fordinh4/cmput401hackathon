@@ -8,12 +8,10 @@ function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <div style={{ padding: '20px' }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/resume" element={<ResumeManage />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/resume" element={<ResumeManage />} />
+      </Routes>
     </BrowserRouter>
   )
 }
