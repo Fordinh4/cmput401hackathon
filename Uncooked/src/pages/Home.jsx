@@ -1,3 +1,14 @@
+import { useState } from "react";
+import AddJobModal from "../components/AddJobModal";
+
+export default function Home() {
+  const [open, setOpen] = useState(false);
+
+  const handleSave = (job) => {
+    console.log("Saved job:", job);
+    // later: store to Firebase
+  };
+
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Briefcase, TrendingUp, Calendar, CheckCircle2, X, ChevronDown, ChevronUp } from 'lucide-react';
@@ -231,6 +242,14 @@ const Home = () => {
   const totalJobs = jobs.length;
 
   return (
+    <div>
+      <button onClick={() => setOpen(true)}>+ Add Job</button>
+
+      <AddJobModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onSave={handleSave}
+      />
     <div className="app-container">
       {/* Header */}
       <header className="app-header">
