@@ -64,6 +64,15 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
     """ViewSet for managing tailored resumes"""
     queryset = TailoredResume.objects.all()
     serializer_class = TailoredResumeSerializer
+    
+    @action(detail=False, methods=['get'], url_path='by-company/(?P<company_name>[^/.]+)')
+    def by_company(self, request, company_name=None):
+        """Get all tailored resumes for a specific company"""
+        resumes = self.queryset.filter(
+            job_application__company_name__iexact=company_name
+        ).select_related('job_application')
+        serializer = self.get_serializer(resumes, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['post'], url_path='tailor/(?P<job_id>[^/.]+)')
     def tailor_for_job(self, request, job_id=None):
@@ -79,8 +88,22 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Use HTML content
-            resume_content = master_resume.html_content
+            # Check if user wants to use a different base resume
+            base_resume_id = request.data.get('base_resume_id')
+            base_resume = None
+            
+            if base_resume_id:
+                try:
+                    base_resume = TailoredResume.objects.get(id=base_resume_id)
+                    resume_content = base_resume.current_html
+                except TailoredResume.DoesNotExist:
+                    return Response(
+                        {'error': f'Base resume with id {base_resume_id} not found.'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            else:
+                # Use master resume as base
+                resume_content = master_resume.html_content
             
             # Analyze resume and get suggestions
             analysis = analyze_resume_for_job(
@@ -93,7 +116,8 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
             tailored_resume = TailoredResume.objects.create(
                 master_resume=master_resume,
                 job_application=job,
-                current_html=master_resume.html_content,  # Start with master HTML
+                base_resume=base_resume,  # Track which resume was used as base
+                current_html=resume_content,  # Start with base resume HTML
                 initial_cookedness_score=analysis.get('cookedness_score', 100),
                 current_cookedness_score=analysis.get('cookedness_score', 100),
                 ai_suggestions=analysis.get('suggestions', []),

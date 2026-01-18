@@ -42,6 +42,7 @@ class TailoredResume(models.Model):
     """Stores AI-tailored resume versions for specific jobs"""
     master_resume = models.ForeignKey(MasterResume, on_delete=models.CASCADE, related_name='tailored_versions')
     job_application = models.ForeignKey(JobApplication, on_delete=models.CASCADE, related_name='tailored_resumes')
+    base_resume = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='derived_resumes', help_text="Resume used as base (if built upon another tailored resume)")
     
     current_html = models.TextField(help_text="Current HTML resume content", default="")
     

@@ -6,8 +6,14 @@ from difflib import SequenceMatcher
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# Lazy-load OpenAI client to avoid import-time errors
+_client = None
+
+def get_openai_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    return _client
 
 
 def analyze_resume_for_job(resume_html: str, job_description: str) -> dict:
@@ -68,7 +74,7 @@ Respond with ONLY a JSON object in this exact format:
 No other text, just the JSON."""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert resume advisor who responds only with JSON."},
@@ -166,7 +172,7 @@ Respond with ONLY a JSON object:
 No other text, just the JSON."""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert resume advisor who responds only with JSON."},
@@ -248,7 +254,7 @@ Respond with ONLY a JSON object in this exact format:
 No other text, just the JSON."""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert career advisor who responds only with JSON."},
@@ -323,7 +329,7 @@ Respond with ONLY a JSON array of projects in this exact format:
 No other text, just the JSON array."""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a career advisor who responds only with JSON."},

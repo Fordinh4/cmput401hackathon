@@ -9,6 +9,13 @@ function YetToApplyJobsList() {
   const [generating, setGenerating] = useState({});
   const [projectSuggestions, setProjectSuggestions] = useState(null);
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [showResumeSelector, setShowResumeSelector] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [companyResumes, setCompanyResumes] = useState([]);
+  const [loadingCompanyResumes, setLoadingCompanyResumes] = useState(false);
+  const [deletingResume, setDeletingResume] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [resumeToDelete, setResumeToDelete] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,15 +35,69 @@ function YetToApplyJobsList() {
     }
   };
 
-  const generateTailoredResume = async (jobId) => {
-    setGenerating({ ...generating, [jobId]: true });
+  const showResumeChoiceModal = async (job) => {
+    setSelectedJob(job);
+    setLoadingCompanyResumes(true);
+    setShowResumeSelector(true);
     
     try {
+      // Fetch existing resumes for this company
+      const response = await fetch(`${API_BASE}/resume/tailored/by-company/${encodeURIComponent(job.company_name)}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanyResumes(data);
+      }
+    } catch (error) {
+      console.error('Error fetching company resumes:', error);
+    } finally {
+      setLoadingCompanyResumes(false);
+    }
+  };
+  
+  const confirmDeleteResume = (resume, e) => {
+    e.stopPropagation(); // Prevent triggering the card's onClick
+    setResumeToDelete(resume);
+    setShowDeleteConfirm(true);
+  };
+  
+  const deleteResume = async () => {
+    if (!resumeToDelete) return;
+    
+    setDeletingResume(resumeToDelete.id);
+    setShowDeleteConfirm(false);
+    
+    try {
+      const response = await fetch(`${API_BASE}/resume/tailored/${resumeToDelete.id}/`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Remove from local state
+        setCompanyResumes(companyResumes.filter(r => r.id !== resumeToDelete.id));
+      } else {
+        console.error('Failed to delete resume');
+      }
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+    } finally {
+      setDeletingResume(null);
+      setResumeToDelete(null);
+    }
+  };
+  
+  const generateTailoredResume = async (jobId, baseResumeId = null) => {
+    setGenerating({ ...generating, [jobId]: true });
+    setShowResumeSelector(false);
+    
+    try {
+      const body = baseResumeId ? { base_resume_id: baseResumeId } : {};
+      
       const response = await fetch(`${API_BASE}/resume/tailored/tailor/${jobId}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
@@ -155,7 +216,7 @@ function YetToApplyJobsList() {
                   </div>
                 </div>
                 <button
-                  onClick={() => generateTailoredResume(job.id)}
+                  onClick={() => showResumeChoiceModal(job)}
                   disabled={generating[job.id]}
                   style={{
                     padding: '14px 28px',
@@ -190,6 +251,306 @@ function YetToApplyJobsList() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Resume Selector Modal */}
+      {showResumeSelector && selectedJob && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '700px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            padding: '30px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            borderTop: '6px solid #BD632F'
+          }}>
+            <div style={{ marginBottom: '25px' }}>
+              <h2 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#273E47', fontWeight: '700' }}>
+                📝 Choose Base Resume
+              </h2>
+              <p style={{ color: '#7f8c8d', fontSize: '14px', marginBottom: '5px' }}>
+                For: <strong style={{ color: '#273E47' }}>{selectedJob.position}</strong> at <strong style={{ color: '#BD632F' }}>{selectedJob.company_name}</strong>
+              </p>
+            </div>
+            
+            {loadingCompanyResumes ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#7f8c8d' }}>
+                Loading previous resumes...
+              </div>
+            ) : (
+              <div>
+                {/* Master Resume Option */}
+                <div
+                  onClick={() => generateTailoredResume(selectedJob.id, null)}
+                  style={{
+                    padding: '20px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '12px',
+                    marginBottom: '15px',
+                    border: '2px solid #D8973C',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e8f4f8';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontSize: '28px' }}>📄</div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#273E47', fontWeight: '600' }}>
+                        Master Resume
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#7f8c8d' }}>
+                        Start from your base master resume (recommended for first application)
+                      </p>
+                    </div>
+                    <div style={{
+                      padding: '6px 16px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      DEFAULT
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Previous Company Resumes */}
+                {companyResumes.length > 0 && (
+                  <div>
+                    <div style={{ 
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#273E47',
+                      marginBottom: '12px',
+                      paddingLeft: '4px'
+                    }}>
+                      🏢 Previous resumes for {selectedJob.company_name}:
+                    </div>
+                    {companyResumes.map((resume) => (
+                      <div
+                        key={resume.id}
+                        onClick={() => generateTailoredResume(selectedJob.id, resume.id)}
+                        style={{
+                          padding: '18px',
+                          backgroundColor: '#ffffff',
+                          borderRadius: '12px',
+                          marginBottom: '12px',
+                          border: '2px solid #e0e0e0',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f0f8ff';
+                          e.currentTarget.style.borderColor = '#BD632F';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.borderColor = '#e0e0e0';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                          <div style={{ fontSize: '24px' }}>📋</div>
+                          <div style={{ flex: 1 }}>
+                            <h3 style={{ margin: '0 0 6px 0', fontSize: '15px', color: '#273E47', fontWeight: '600' }}>
+                              {resume.job_application.position}
+                            </h3>
+                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#7f8c8d', marginBottom: '8px' }}>
+                              <span>🗓️ {new Date(resume.created_at).toLocaleDateString()}</span>
+                              <span>🎯 Score: {resume.current_cookedness_score}%</span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
+                              Build upon this resume to save time!
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => confirmDeleteResume(resume, e)}
+                            disabled={deletingResume === resume.id}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: deletingResume === resume.id ? '#95a5a6' : '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: deletingResume === resume.id ? 'not-allowed' : 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              transition: 'all 0.2s ease',
+                              opacity: deletingResume === resume.id ? 0.6 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (deletingResume !== resume.id) {
+                                e.currentTarget.style.backgroundColor = '#c82333';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (deletingResume !== resume.id) {
+                                e.currentTarget.style.backgroundColor = '#dc3545';
+                              }
+                            }}
+                          >
+                            {deletingResume === resume.id ? '⏳' : '🗑️ Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <button
+              onClick={() => setShowResumeSelector(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#f8f9fa',
+                color: '#273E47',
+                border: '2px solid #e0e0e0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                marginTop: '15px'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && resumeToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '30px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            borderTop: '6px solid #dc3545'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '15px' }}>⚠️</div>
+              <h2 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#273E47', fontWeight: '700' }}>
+                Delete Resume?
+              </h2>
+              <p style={{ color: '#7f8c8d', fontSize: '14px', margin: '10px 0' }}>
+                Are you sure you want to delete the resume for:
+              </p>
+              <p style={{ color: '#273E47', fontSize: '16px', fontWeight: '600', margin: '10px 0' }}>
+                {resumeToDelete.job_application.position}
+              </p>
+              <p style={{ color: '#BD632F', fontSize: '14px', fontWeight: '600', margin: '5px 0' }}>
+                at {resumeToDelete.job_application.company_name}
+              </p>
+              <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '15px', fontWeight: '600' }}>
+                ⚠️ This action cannot be undone!
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setResumeToDelete(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  backgroundColor: '#f8f9fa',
+                  color: '#273E47',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e8e9ea';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8f9fa';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteResume}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 8px rgba(220, 53, 69, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#c82333';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 12px rgba(220, 53, 69, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc3545';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(220, 53, 69, 0.3)';
+                }}
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
       
