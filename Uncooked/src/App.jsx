@@ -12,12 +12,24 @@ function App() {
         {/* Navigation */}
         <nav style={{
           padding: '20px 40px', 
-          background: '#273E47', 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          background: 'linear-gradient(135deg, #1a2930 0%, #273E47 40%, #BD632F 100%)', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
           display: 'flex',
-          gap: '24px',
+          gap: '32px',
           alignItems: 'center'
         }}>
+          {/* UNCOOKED Logo */}
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#FFFFFF',
+            letterSpacing: '3px',
+            marginRight: 'auto',
+            textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            UNCOOKED
+          </div>
+          
           <Link to="/" style={{
             color: 'white',
             textDecoration: 'none',

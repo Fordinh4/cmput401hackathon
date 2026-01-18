@@ -533,56 +533,6 @@ export default function Home() {
       <AddJobModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSave} />
 
       <div className="app-container">
-        {/* UNCOOKED Branding */}
-        <div style={{
-          textAlign: 'center',
-          padding: '50px 20px',
-          background: 'linear-gradient(135deg, #273E47 0%, #BD632F 50%, #D8973C 100%)',
-          borderRadius: '24px',
-          marginBottom: '30px',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'radial-gradient(circle at 30% 50%, rgba(255,215,0,0.1) 0%, transparent 50%)',
-            pointerEvents: 'none'
-          }} />
-          <h1 style={{
-            fontSize: '84px',
-            fontWeight: '900',
-            margin: '0',
-            background: 'linear-gradient(120deg, #FFFFFF 0%, #FFD700 40%, #FFFFFF 60%, #FFE4B5 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.4))',
-            letterSpacing: '12px',
-            fontFamily: '"Impact", "Haettenschweiler", "Arial Black", sans-serif',
-            position: 'relative',
-            animation: 'shimmer 3s infinite linear'
-          }}>
-            UNCOOKED
-          </h1>
-          <p style={{
-            color: '#FFFFFF',
-            fontSize: '20px',
-            margin: '20px 0 0 0',
-            fontWeight: '600',
-            letterSpacing: '4px',
-            textShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            textTransform: 'uppercase',
-            position: 'relative'
-          }}>
-            🥩 Stay Authentic. Stay Raw. Stay Uncooked. 🥩
-          </p>
-        </div>
-
         {/* Dashboard */}
         <div className="dashboard">
           {/* Progress Bar */}
