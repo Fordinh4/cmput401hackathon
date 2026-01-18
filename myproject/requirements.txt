@@ -1,9 +1,20 @@
 # Core Django packages
 Django==5.1.6
 django-cors-headers==4.9.0
+django-vite==3.1.0
 djangorestframework==3.15.2
 
 # AI & Resume Processing
 openai==2.15.0
 python-dotenv==1.2.1
+
+# PDF Generation
 weasyprint==67.0
+Pillow==11.1.0
+
+# Additional dependencies
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.1
+setuptools==75.8.1
+wheel==0.45.1
