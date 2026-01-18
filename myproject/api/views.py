@@ -281,13 +281,14 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
 
 
 # Adapter endpoint for frontend compatibility
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 def jobs_list_adapter(request, job_id=None):
     """
     Adapter endpoint that maps the frontend's expected API to our JobApplication model.
     GET: Returns all jobs in the format expected by Home.jsx
     POST: Creates a job from the format sent by AddJobModal.jsx
     PATCH: Updates a job's status or other fields
+    DELETE: Deletes a job by ID
     """
     if request.method == 'GET':
         jobs = JobApplication.objects.all()
@@ -370,4 +371,15 @@ def jobs_list_adapter(request, job_id=None):
             'cooked_level': 0,
             'tasks': {},
         }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'DELETE':
+        if not job_id:
+            return Response({'error': 'Job ID required for deletion'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            job = JobApplication.objects.get(id=job_id)
+            job.delete()
+            return Response({'message': 'Job deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except JobApplication.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
     

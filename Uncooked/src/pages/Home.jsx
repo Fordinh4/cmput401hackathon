@@ -364,8 +364,21 @@ export default function Home() {
 
   const handleDeleteSelected = () => setShowDeleteConfirm(true);
 
-  const confirmDelete = () => {
-    // ✅ remove from UI immediately
+  const confirmDelete = async () => {
+    // ✅ Delete from backend
+    try {
+      await Promise.all(
+        selectedJobs.map(jobId =>
+          fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+            method: 'DELETE',
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Error deleting jobs:', error);
+    }
+    
+    // ✅ remove from UI
     setJobs((prev) => prev.filter((job) => !selectedJobs.includes(job.id)));
 
     // ✅ clear selection + close modal
@@ -823,16 +836,98 @@ export default function Home() {
       {/* Delete confirm */}
       {showDeleteConfirm &&
         createPortal(
-          <div className="delete-confirm-overlay" onClick={cancelDelete}>
-            <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
-              <h3>Delete selected jobs?</h3>
-              <p>This can’t be undone.</p>
-              <div className="delete-confirm-actions">
-                <button className="btn-secondary" onClick={cancelDelete}>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2000,
+              padding: '20px'
+            }}
+            onClick={cancelDelete}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                maxWidth: '500px',
+                width: '100%',
+                padding: '30px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                borderTop: '6px solid #E74C3C'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+                <div style={{ fontSize: '64px', marginBottom: '15px' }}>⚠️</div>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#273E47', fontWeight: '700' }}>
+                  Delete {selectedJobs.length} Job{selectedJobs.length > 1 ? 's' : ''}?
+                </h3>
+                <p style={{ color: '#7f8c8d', fontSize: '14px', margin: '10px 0' }}>
+                  Are you sure you want to delete the selected job{selectedJobs.length > 1 ? 's' : ''}?
+                </p>
+                <p style={{ color: '#E74C3C', fontSize: '13px', marginTop: '15px', fontWeight: '600' }}>
+                  ⚠️ This action cannot be undone!
+                </p>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={cancelDelete}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    backgroundColor: '#f8f9fa',
+                    color: '#273E47',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e8e9ea';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                  }}
+                >
                   Cancel
                 </button>
-                <button className="btn-danger" onClick={confirmDelete}>
-                  Delete
+                <button
+                  onClick={confirmDelete}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    backgroundColor: '#E74C3C',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 8px rgba(231, 76, 60, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#C0392B';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 12px rgba(231, 76, 60, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#E74C3C';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(231, 76, 60, 0.3)';
+                  }}
+                >
+                  🗑️ Delete
                 </button>
               </div>
             </div>
