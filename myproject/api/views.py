@@ -339,6 +339,9 @@ def jobs_list_adapter(request, job_id=None):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Refresh from database to get properly formatted dates
+        job.refresh_from_db()
+        
         # Return in the format expected by frontend
         return Response({
             'id': job.id,
