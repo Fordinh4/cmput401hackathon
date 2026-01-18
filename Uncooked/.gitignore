@@ -28,6 +28,7 @@ venv/
 __pycache__/
 *.pyc
 db.sqlite3
+myproject/db.sqlite3
 
 # Node
 node_modules/
