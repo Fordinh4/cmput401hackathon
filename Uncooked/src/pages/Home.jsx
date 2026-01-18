@@ -1,22 +1,23 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import AddJobModal from "../components/AddJobModal";
-import { Plus, Briefcase, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, X } from "lucide-react";
 import "./Home.css";
 
 export default function Home() {
   // Modal state (AddJobModal)
   const [open, setOpen] = useState(false);
 
-  const [jobs, setJobs] = useState([]);  //Start with empty array
-  //Loading jobs from database
+  // Jobs from backend
+  const [jobs, setJobs] = useState([]);
+
+  // Loading jobs from database
   useEffect(() => {
     const fetchJobs = async () => {
       try {
         const response = await fetch("http://localhost:8000/api/jobs/");
         if (response.ok) {
           const data = await response.json();
-          // Map backend data to frontend format
           const mappedJobs = data.map((job) => ({
             id: job.id,
             position: job.job_title,
@@ -26,9 +27,12 @@ export default function Home() {
             maxSalary: job.max_salary || 0,
             location: job.location,
             status: job.status,
-            dateSaved: job.date_applied ? job.date_applied.split('T')[0] : new Date().toISOString().slice(0, 10),// Parsing string if exists,
-            deadline: job.deadline ? job.deadline.split('T')[0] : null,
-            dateApplied: job.date_applied ? job.date_applied.split('T')[0] : null,
+            // NOTE: your current mapping uses date_applied for dateSaved; keeping as-is
+            dateSaved: job.date_applied
+              ? job.date_applied.split("T")[0]
+              : new Date().toISOString().slice(0, 10),
+            deadline: job.deadline ? job.deadline.split("T")[0] : null,
+            dateApplied: job.date_applied ? job.date_applied.split("T")[0] : null,
             cookedLevel: job.cooked_level || 0,
             followUp: null,
             tasks: [],
@@ -42,9 +46,9 @@ export default function Home() {
     };
 
     fetchJobs();
-  }, []);  //Run once at start
+  }, []);
 
-
+  // Inline editing / dropdowns / sorting
   const [editingCell, setEditingCell] = useState(null); // { jobId, field } | null
   const [editValue, setEditValue] = useState("");
   const [openStatusDropdown, setOpenStatusDropdown] = useState(null); // jobId | null
@@ -54,6 +58,14 @@ export default function Home() {
 
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
+
+  // ✅ Selection + delete confirm (restored)
+  const [selectedJobs, setSelectedJobs] = useState([]);
+  useEffect(() => {
+    console.log("selectedJobs:", selectedJobs);
+  }, [selectedJobs]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const statusRefs = useRef({});
   const tasksRefs = useRef({});
@@ -75,17 +87,14 @@ export default function Home() {
     []
   );
 
-    // ✅ Save from modal -> send to backend & append into list
+  // ✅ Save from modal -> send to backend & append into list
   const handleSave = async (jobFromModal) => {
     const today = new Date().toISOString().slice(0, 10);
 
     try {
-      // Send to Django backend
       const response = await fetch("http://localhost:8000/api/jobs/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           job_title: jobFromModal.title,
           company: jobFromModal.company,
@@ -110,7 +119,6 @@ export default function Home() {
 
       const savedJob = await response.json();
 
-      // Map backend response to frontend schema
       const newJob = {
         id: savedJob.id,
         position: jobFromModal.title?.trim() || "New Position",
@@ -192,11 +200,12 @@ export default function Home() {
           setEditingCell(null);
           setEditValue("");
         }
+        if (showDeleteConfirm) setShowDeleteConfirm(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editingCell]);
+  }, [editingCell, showDeleteConfirm]);
 
   // Close dropdowns on scroll/resize
   useEffect(() => {
@@ -319,28 +328,45 @@ export default function Home() {
 
   const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
 
+  const toggleSelectAll = () => {
+    const visibleIds = sortedJobs.map((j) => j.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedJobs.includes(id));
+
+    if (allSelected) {
+      setSelectedJobs((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedJobs((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const toggleSelectJob = (jobId) => {
+    setSelectedJobs((prev) =>
+      prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
+    );
+  };
+
+  const handleDeleteSelected = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = () => {
+    // ✅ remove from UI immediately
+    setJobs((prev) => prev.filter((job) => !selectedJobs.includes(job.id)));
+
+    // ✅ clear selection + close modal
+    setSelectedJobs([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => setShowDeleteConfirm(false);
+
+  const allVisibleSelected =
+    sortedJobs.length > 0 && sortedJobs.every((j) => selectedJobs.includes(j.id));
+
+
   return (
     <div className="app-shell">
-      {/* ✅ Only one add button now (the header one) */}
       <AddJobModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSave} />
 
       <div className="app-container">
-        {/* Header */}
-        <header className="app-header">
-          <div className="header-content">
-            <div className="header-title">
-              <Briefcase className="header-icon" />
-              <h1>Job Application Tracker</h1>
-            </div>
-            {/* CHECK THIS */}
-            {/* ✅ This is now the real Add Job button */}
-            <button className="add-job-btn" onClick={() => setOpen(true)}>
-              <Plus size={20} />
-              Add New Job
-            </button>
-          </div>
-        </header>
-
         {/* Dashboard */}
         <div className="dashboard">
           {/* Progress Bar */}
@@ -383,6 +409,7 @@ export default function Home() {
               </div>
             ))}
           </div>
+
           <div className="add-job-container">
             <button className="add-job-btn" onClick={() => setOpen(true)}>
               <Plus size={20} />
@@ -393,10 +420,34 @@ export default function Home() {
 
         {/* Table */}
         <div className="table-container">
+          {selectedJobs.length > 0 && (
+            <div className="action-bar">
+              <div className="action-bar-content">
+                <span className="selected-count">
+                  {selectedJobs.length} selected
+                </span>
+
+                <button className="delete-btn" onClick={handleDeleteSelected}>
+                  <X size={18} />
+                  Delete Selected
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="table-wrapper">
             <table className="jobs-table">
               <thead>
                 <tr>
+                  <th style={{ width: "50px" }} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAll}
+                      className="select-checkbox"
+                    />
+                  </th>
+
                   <th
                     onClick={() => handleSort("position")}
                     className={sortConfig.key === "position" ? "sorted-column" : ""}
@@ -523,7 +574,20 @@ export default function Home() {
 
               <tbody>
                 {sortedJobs.map((job) => (
-                  <tr key={job.id}>
+                  <tr
+                    key={job.id}
+                    className={selectedJobs.includes(job.id) ? "selected-row" : ""}
+                  >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedJobs.includes(job.id)}
+                        onChange={() => toggleSelectJob(job.id)}
+                        className="select-checkbox"
+                      />
+                    </td>
+
+
                     <td
                       className="editable-cell"
                       onClick={() => !editingCell && startEdit(job.id, "position", job.position)}
@@ -570,7 +634,9 @@ export default function Home() {
 
                     <td
                       className="editable-cell"
-                      onClick={() => !editingCell && startEdit(job.id, "maxSalary", job.maxSalary)}
+                      onClick={() =>
+                        !editingCell && startEdit(job.id, "maxSalary", String(job.maxSalary ?? 0))
+                      }
                     >
                       {editingCell?.jobId === job.id && editingCell?.field === "maxSalary" ? (
                         <input
@@ -697,98 +763,116 @@ export default function Home() {
             </table>
           </div>
         </div>
-
-        {/* Status Dropdown Portal */}
-        {openStatusDropdown &&
-          createPortal(
-            <>
-              <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
-              <div
-                className="status-dropdown"
-                style={{ position: "absolute", top: dropdownPos.top, left: dropdownPos.left }}
-              >
-                {statusOptions.map((status) => (
-                  <div
-                    key={status}
-                    className="status-option"
-                    style={{
-                      backgroundColor:
-                        currentStatusJob?.status === status
-                          ? `${statusColors[status]}20`
-                          : "transparent",
-                      color: statusColors[status],
-                    }}
-                    onClick={() => updateStatus(openStatusDropdown, status)}
-                  >
-                    {status}
-                  </div>
-                ))}
-              </div>
-            </>,
-            document.body
-          )}
-
-        {/* Tasks Dropdown Portal */}
-        {openTasksDropdown &&
-          createPortal(
-            <>
-              <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
-              <div
-                className="tasks-dropdown"
-                style={{
-                  position: "absolute",
-                  top: tasksDropdownPos.top,
-                  left: tasksDropdownPos.left,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="tasks-list">
-                  {(() => {
-                    const currentJob = getCurrentJob(openTasksDropdown);
-                    if (!currentJob || currentJob.tasks.length === 0) {
-                      return <div className="no-tasks">No tasks yet</div>;
-                    }
-                    return currentJob.tasks.map((task, i) => (
-                      <div key={`${task}-${i}`} className="task-item">
-                        <label className="task-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={currentJob.completedTasks.includes(task)}
-                            onChange={() => toggleTask(openTasksDropdown, task)}
-                          />
-                          <span
-                            className={
-                              currentJob.completedTasks.includes(task) ? "task-completed" : ""
-                            }
-                          >
-                            {task}
-                          </span>
-                        </label>
-                      </div>
-                    ));
-                  })()}
-                </div>
-
-                <div className="add-task">
-                  <input
-                    type="text"
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addTask(openTasksDropdown);
-                    }}
-                    placeholder="New task..."
-                    className="task-input"
-                  />
-                  <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
-                    Add
-                  </button>
-                </div>
-              </div>
-            </>,
-            document.body
-          )}
       </div>
+
+      {/* Delete confirm */}
+      {showDeleteConfirm &&
+        createPortal(
+          <div className="delete-confirm-overlay" onClick={cancelDelete}>
+            <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
+              <h3>Delete selected jobs?</h3>
+              <p>This can’t be undone.</p>
+              <div className="delete-confirm-actions">
+                <button className="btn-secondary" onClick={cancelDelete}>
+                  Cancel
+                </button>
+                <button className="btn-danger" onClick={confirmDelete}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Status Dropdown Portal */}
+      {openStatusDropdown &&
+        createPortal(
+          <>
+            <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
+            <div
+              className="status-dropdown"
+              style={{ position: "absolute", top: dropdownPos.top, left: dropdownPos.left }}
+            >
+              {statusOptions.map((status) => (
+                <div
+                  key={status}
+                  className="status-option"
+                  style={{
+                    backgroundColor:
+                      currentStatusJob?.status === status
+                        ? `${statusColors[status]}20`
+                        : "transparent",
+                    color: statusColors[status],
+                  }}
+                  onClick={() => updateStatus(openStatusDropdown, status)}
+                >
+                  {status}
+                </div>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
+
+      {/* Tasks Dropdown Portal */}
+      {openTasksDropdown &&
+        createPortal(
+          <>
+            <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
+            <div
+              className="tasks-dropdown"
+              style={{
+                position: "absolute",
+                top: tasksDropdownPos.top,
+                left: tasksDropdownPos.left,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="tasks-list">
+                {(() => {
+                  const currentJob = getCurrentJob(openTasksDropdown);
+                  if (!currentJob || currentJob.tasks.length === 0) {
+                    return <div className="no-tasks">No tasks yet</div>;
+                  }
+                  return currentJob.tasks.map((task, i) => (
+                    <div key={`${task}-${i}`} className="task-item">
+                      <label className="task-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={currentJob.completedTasks.includes(task)}
+                          onChange={() => toggleTask(openTasksDropdown, task)}
+                        />
+                        <span
+                          className={currentJob.completedTasks.includes(task) ? "task-completed" : ""}
+                        >
+                          {task}
+                        </span>
+                      </label>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              <div className="add-task">
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addTask(openTasksDropdown);
+                  }}
+                  placeholder="New task..."
+                  className="task-input"
+                />
+                <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
+                  Add
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }
