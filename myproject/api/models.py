@@ -16,8 +16,12 @@ class MasterResume(models.Model):
 class JobApplication(models.Model):
     """Stores job application details"""
     STATUS_CHOICES = [
-        ('yet_to_apply', 'Yet to Apply'),
-        ('applied', 'Applied'),
+        ('Applying', 'Applying'),
+        ('Applied', 'Applied'),
+        ('Interviewing', 'Interviewing'),
+        ('Negotiating', 'Negotiating'),
+        ('Accepted', 'Accepted'),
+        ('No Response', 'No Response'),
     ]
     
     company_name = models.CharField(max_length=255)
@@ -26,7 +30,7 @@ class JobApplication(models.Model):
     application_status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='yet_to_apply'
+        default='Applying'
     )
     date_added = models.DateTimeField(auto_now_add=True)
     date_applied = models.DateTimeField(null=True, blank=True)

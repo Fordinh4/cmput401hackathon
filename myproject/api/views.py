@@ -36,8 +36,8 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def yet_to_apply(self, request):
-        """Get all jobs with 'yet_to_apply' status"""
-        jobs = self.queryset.filter(application_status='yet_to_apply')
+        """Get all jobs with 'Applying' status (ready to tailor resume)"""
+        jobs = self.queryset.filter(application_status='Applying')
         serializer = self.get_serializer(jobs, many=True)
         return Response(serializer.data)
 
@@ -47,9 +47,10 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         job = self.get_object()
         new_status = request.data.get('application_status')
         
-        if new_status not in ['yet_to_apply', 'applied']:
+        valid_statuses = ['Applying', 'Applied', 'Interviewing', 'Negotiating', 'Accepted', 'No Response']
+        if new_status not in valid_statuses:
             return Response(
-                {'error': 'Invalid status. Must be "yet_to_apply" or "applied"'},
+                {'error': f'Invalid status. Must be one of: {valid_statuses}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
