@@ -16,6 +16,8 @@ function YetToApplyJobsList() {
   const [deletingResume, setDeletingResume] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState(null);
+  const [editingDescription, setEditingDescription] = useState(null);
+  const [editDescriptionValue, setEditDescriptionValue] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -83,6 +85,38 @@ function YetToApplyJobsList() {
       setDeletingResume(null);
       setResumeToDelete(null);
     }
+  };
+  
+  const startEditDescription = (job) => {
+    setEditingDescription(job.id);
+    setEditDescriptionValue(job.description);
+  };
+  
+  const saveDescription = async (jobId) => {
+    try {
+      const response = await fetch(`${API_BASE}/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_description: editDescriptionValue }),
+      });
+      
+      if (response.ok) {
+        // Update local state
+        setJobs(jobs.map(job => 
+          job.id === jobId ? { ...job, description: editDescriptionValue } : job
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating description:', error);
+    } finally {
+      setEditingDescription(null);
+      setEditDescriptionValue('');
+    }
+  };
+  
+  const cancelEditDescription = () => {
+    setEditingDescription(null);
+    setEditDescriptionValue('');
   };
   
   const generateTailoredResume = async (jobId, baseResumeId = null) => {
@@ -193,26 +227,112 @@ function YetToApplyJobsList() {
                   </p>
                   <div style={{ marginTop: '16px' }}>
                     <div style={{ 
-                      color: '#273E47', 
-                      fontSize: '14px',
-                      fontWeight: '600',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                       marginBottom: '8px'
-                    }}>Description:</div>
-                    <p style={{ 
-                      marginTop: '0',
-                      color: '#555',
-                      whiteSpace: 'pre-wrap',
-                      lineHeight: '1.6',
-                      fontSize: '14px',
-                      backgroundColor: '#fafafa',
-                      padding: '16px',
-                      borderRadius: '8px',
-                      border: '1px solid #e0e0e0'
                     }}>
-                      {job.description.length > 300
-                        ? job.description.substring(0, 300) + '...'
-                        : job.description}
-                    </p>
+                      <div style={{ 
+                        color: '#273E47', 
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>Description:</div>
+                      {editingDescription !== job.id && (
+                        <button
+                          onClick={() => startEditDescription(job)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#D8973C',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#BD632F'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#D8973C'}
+                        >
+                          ✏️ Edit
+                        </button>
+                      )}
+                    </div>
+                    {editingDescription === job.id ? (
+                      <div>
+                        <textarea
+                          value={editDescriptionValue}
+                          onChange={(e) => setEditDescriptionValue(e.target.value)}
+                          style={{
+                            width: '100%',
+                            minHeight: '200px',
+                            padding: '16px',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            border: '2px solid #D8973C',
+                            borderRadius: '8px',
+                            fontFamily: 'inherit',
+                            resize: 'vertical',
+                            marginBottom: '10px'
+                          }}
+                          autoFocus
+                        />
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button
+                            onClick={() => saveDescription(job.id)}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#8FBC8F',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7BA87B'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8FBC8F'}
+                          >
+                            ✅ Save
+                          </button>
+                          <button
+                            onClick={cancelEditDescription}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#E74C3C',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#C0392B'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E74C3C'}
+                          >
+                            ❌ Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ 
+                        marginTop: '0',
+                        color: '#555',
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: '1.6',
+                        fontSize: '14px',
+                        backgroundColor: '#fafafa',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e0e0e0'
+                      }}>
+                        {job.description.length > 300
+                          ? job.description.substring(0, 300) + '...'
+                          : job.description}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button
