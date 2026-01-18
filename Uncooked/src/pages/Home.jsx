@@ -1,83 +1,49 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import AddJobModal from "../components/AddJobModal";
-import { Plus, Briefcase, ChevronDown, X } from "lucide-react";
+import { Plus, Briefcase, ChevronDown } from "lucide-react";
 import "./Home.css";
 
 export default function Home() {
   // Modal state (AddJobModal)
   const [open, setOpen] = useState(false);
 
-  const statusOptions = useMemo(
-    () => ["Applying", "Applied", "Interviewing", "Negotiating", "Accepted", "No Response"],
-    []
-  );
+  const [jobs, setJobs] = useState([]);  //Start with empty array
+  //Loading jobs from database
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/jobs/");
+        if (response.ok) {
+          const data = await response.json();
+          // Map backend data to frontend format
+          const mappedJobs = data.map((job) => ({
+            id: job.id,
+            position: job.job_title,
+            company: job.company,
+            url: job.url,
+            description: job.job_description,
+            maxSalary: job.max_salary || 0,
+            location: job.location,
+            status: job.status,
+            dateSaved: job.date_applied ? job.date_applied.split('T')[0] : new Date().toISOString().slice(0, 10),// Parsing string if exists,
+            deadline: job.deadline ? job.deadline.split('T')[0] : null,
+            dateApplied: job.date_applied ? job.date_applied.split('T')[0] : null,
+            cookedLevel: job.cooked_level || 0,
+            followUp: null,
+            tasks: [],
+            completedTasks: [],
+          }));
+          setJobs(mappedJobs);
+        }
+      } catch (error) {
+        console.error("Error loading jobs:", error);
+      }
+    };
 
-  const statusColors = useMemo(
-    () => ({
-      Applying: "#5A7C8C",
-      Applied: "#BD632F",
-      Interviewing: "#D8973C",
-      Negotiating: "#E8A84D",
-      Accepted: "#5EAA6F",
-      "No Response": "#C75450",
-    }),
-    []
-  );
+    fetchJobs();
+  }, []);  //Run once at start
 
-  const [jobs, setJobs] = useState([
-    {
-      id: 1,
-      position: "Senior Frontend Developer",
-      company: "TechCorp Inc.",
-      url: "https://techcorp.com/careers",
-      description: "React and TypeScript position",
-      maxSalary: 120000,
-      location: "Calgary, AB (Hybrid)",
-      status: "Interviewing",
-      dateSaved: "2026-01-10",
-      deadline: "2026-01-25",
-      dateApplied: "2026-01-12",
-      cookedLevel: 5,
-      followUp: "2026-01-20",
-      tasks: ["Prepare portfolio", "Research company", "Practice coding questions"],
-      completedTasks: ["Prepare portfolio", "Research company"],
-    },
-    {
-      id: 2,
-      position: "Full Stack Engineer",
-      company: "StartupXYZ",
-      url: "https://startupxyz.com",
-      description: "Node.js and React",
-      maxSalary: 95000,
-      location: "Remote",
-      status: "Applied",
-      dateSaved: "2026-01-08",
-      deadline: null,
-      dateApplied: "2026-01-09",
-      cookedLevel: 3,
-      followUp: null,
-      tasks: ["Send follow-up email"],
-      completedTasks: [],
-    },
-    {
-      id: 3,
-      position: "Product Manager",
-      company: "InnovateCo",
-      url: "https://innovateco.com",
-      description: "Lead product strategy",
-      maxSalary: 110000,
-      location: "Toronto, ON (On-site)",
-      status: "No Response",
-      dateSaved: "2026-01-05",
-      deadline: "2026-01-15",
-      dateApplied: "2026-01-06",
-      cookedLevel: 2,
-      followUp: null,
-      tasks: [],
-      completedTasks: [],
-    },
-  ]);
 
   const [editingCell, setEditingCell] = useState(null); // { jobId, field } | null
   const [editValue, setEditValue] = useState("");
@@ -89,40 +55,86 @@ export default function Home() {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [tasksDropdownPos, setTasksDropdownPos] = useState({ top: 0, left: 0 });
 
-  const [selectedJobs, setSelectedJobs] = useState([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
   const statusRefs = useRef({});
   const tasksRefs = useRef({});
 
-  // ✅ Save from modal -> append into list
-  const handleSave = (jobFromModal) => {
+  const statusOptions = useMemo(
+    () => ["Applying", "Applied", "Interviewing", "Negotiating", "Accepted", "No Response"],
+    []
+  );
+
+  const statusColors = useMemo(
+    () => ({
+      Applying: "#9B59B6",
+      Applied: "#BD632F",
+      Interviewing: "#D8973C",
+      Negotiating: "#E8B55E",
+      Accepted: "#8FBC8F",
+      "No Response": "#E74C3C",
+    }),
+    []
+  );
+
+    // ✅ Save from modal -> send to backend & append into list
+  const handleSave = async (jobFromModal) => {
     const today = new Date().toISOString().slice(0, 10);
 
-    const id =
-      globalThis.crypto?.randomUUID?.() ??
-      `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      // Send to Django backend
+      const response = await fetch("http://localhost:8000/api/jobs/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          job_title: jobFromModal.title,
+          company: jobFromModal.company,
+          url: jobFromModal.url,
+          location: jobFromModal.location,
+          job_description: jobFromModal.description,
+          max_salary: jobFromModal.maxSalary || 0,
+          status: jobFromModal.status,
+          deadline: jobFromModal.deadline || null,
+          date_applied: jobFromModal.dateApplied,
+          cooked_level: 1,
+          tasks: {},
+        }),
+      });
 
-    const newJob = {
-      id,
-      position: jobFromModal.title?.trim() || "New Position",
-      company: jobFromModal.company?.trim() || "Company",
-      url: jobFromModal.url?.trim() || "",
-      description: jobFromModal.description?.trim() || "",
-      maxSalary: Number(jobFromModal.maxSalary || 0),
-      location: jobFromModal.location?.trim() || "TBD",
-      status: statusOptions.includes(jobFromModal.status) ? jobFromModal.status : "Applying",
-      dateSaved: today,
-      deadline: jobFromModal.deadline || null,
-      dateApplied: jobFromModal.dateApplied || null,
-      followUp: null,
-      cookedLevel: 1, // placeholder (AI later)
-      tasks: [],
-      completedTasks: [],
-    };
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Backend error:", errorData);
+        alert(`Error saving job: ${errorData.error || "Unknown error"}`);
+        return;
+      }
 
-    setJobs((prev) => [newJob, ...prev]);
-    setOpen(false);
+      const savedJob = await response.json();
+
+      // Map backend response to frontend schema
+      const newJob = {
+        id: savedJob.id,
+        position: jobFromModal.title?.trim() || "New Position",
+        company: jobFromModal.company?.trim() || "Company",
+        url: jobFromModal.url?.trim() || "",
+        description: jobFromModal.description?.trim() || "",
+        maxSalary: Number(jobFromModal.maxSalary || 0),
+        location: jobFromModal.location?.trim() || "TBD",
+        status: jobFromModal.status || "Applying",
+        dateSaved: today,
+        deadline: jobFromModal.deadline || null,
+        dateApplied: jobFromModal.dateApplied || today,
+        followUp: jobFromModal.followUp || null,
+        cookedLevel: 1,
+        tasks: [],
+        completedTasks: [],
+      };
+
+      setJobs((prev) => [newJob, ...prev]);
+      setOpen(false);
+    } catch (error) {
+      console.error("Error saving job:", error);
+      alert("Error saving job: " + error.message);
+    }
   };
 
   // Compute status counts
@@ -180,12 +192,11 @@ export default function Home() {
           setEditingCell(null);
           setEditValue("");
         }
-        if (showDeleteConfirm) setShowDeleteConfirm(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editingCell, showDeleteConfirm]);
+  }, [editingCell]);
 
   // Close dropdowns on scroll/resize
   useEffect(() => {
@@ -308,43 +319,9 @@ export default function Home() {
 
   const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
 
-  // Selection handlers
-  const toggleSelectAll = () => {
-    // Select all currently visible (sorted) jobs
-    const visibleIds = sortedJobs.map((j) => j.id);
-
-    const allSelected =
-      visibleIds.length > 0 && visibleIds.every((id) => selectedJobs.includes(id));
-
-    if (allSelected) {
-      setSelectedJobs((prev) => prev.filter((id) => !visibleIds.includes(id)));
-    } else {
-      setSelectedJobs((prev) => Array.from(new Set([...prev, ...visibleIds])));
-    }
-  };
-
-  const toggleSelectJob = (jobId) => {
-    setSelectedJobs((prev) =>
-      prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
-    );
-  };
-
-  const handleDeleteSelected = () => setShowDeleteConfirm(true);
-
-  const confirmDelete = () => {
-    setJobs((prev) => prev.filter((job) => !selectedJobs.includes(job.id)));
-    setSelectedJobs([]);
-    setShowDeleteConfirm(false);
-  };
-
-  const cancelDelete = () => setShowDeleteConfirm(false);
-
-  const allVisibleSelected =
-    sortedJobs.length > 0 && sortedJobs.every((j) => selectedJobs.includes(j.id));
-
   return (
     <div className="app-shell">
-      {/* Add Job Modal */}
+      {/* ✅ Only one add button now (the header one) */}
       <AddJobModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSave} />
 
       <div className="app-container">
@@ -355,11 +332,18 @@ export default function Home() {
               <Briefcase className="header-icon" />
               <h1>Job Application Tracker</h1>
             </div>
+            {/* CHECK THIS */}
+            {/* ✅ This is now the real Add Job button */}
+            <button className="add-job-btn" onClick={() => setOpen(true)}>
+              <Plus size={20} />
+              Add New Job
+            </button>
           </div>
         </header>
 
         {/* Dashboard */}
         <div className="dashboard">
+          {/* Progress Bar */}
           <div className="progress-container">
             <h2 className="progress-title">Application Progress</h2>
             <div className="progress-bar">
@@ -382,6 +366,7 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Status Cards */}
           <div className="status-cards">
             {statusOptions.map((status) => (
               <div
@@ -408,31 +393,10 @@ export default function Home() {
 
         {/* Table */}
         <div className="table-container">
-          {selectedJobs.length > 0 && (
-            <div className="action-bar">
-              <div className="action-bar-content">
-                <span className="selected-count">{selectedJobs.length} selected</span>
-                <button className="delete-btn" onClick={handleDeleteSelected}>
-                  <X size={18} />
-                  Delete Selected
-                </button>
-              </div>
-            </div>
-          )}
-
           <div className="table-wrapper">
             <table className="jobs-table">
               <thead>
                 <tr>
-                  <th style={{ width: "50px" }}>
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      onChange={toggleSelectAll}
-                      className="select-checkbox"
-                    />
-                  </th>
-
                   <th
                     onClick={() => handleSort("position")}
                     className={sortConfig.key === "position" ? "sorted-column" : ""}
@@ -493,7 +457,10 @@ export default function Home() {
                     )}
                   </th>
 
-                  <th onClick={() => handleSort("dateSaved")}>
+                  <th
+                    onClick={() => handleSort("dateSaved")}
+                    className={sortConfig.key === "dateSaved" ? "sorted-column" : ""}
+                  >
                     Date Saved{" "}
                     {sortConfig.key === "dateSaved" && (
                       <span className="sort-indicator">
@@ -502,7 +469,10 @@ export default function Home() {
                     )}
                   </th>
 
-                  <th onClick={() => handleSort("deadline")}>
+                  <th
+                    onClick={() => handleSort("deadline")}
+                    className={sortConfig.key === "deadline" ? "sorted-column" : ""}
+                  >
                     Deadline{" "}
                     {sortConfig.key === "deadline" && (
                       <span className="sort-indicator">
@@ -511,7 +481,10 @@ export default function Home() {
                     )}
                   </th>
 
-                  <th onClick={() => handleSort("dateApplied")}>
+                  <th
+                    onClick={() => handleSort("dateApplied")}
+                    className={sortConfig.key === "dateApplied" ? "sorted-column" : ""}
+                  >
                     Date Applied{" "}
                     {sortConfig.key === "dateApplied" && (
                       <span className="sort-indicator">
@@ -520,7 +493,10 @@ export default function Home() {
                     )}
                   </th>
 
-                  <th onClick={() => handleSort("followUp")}>
+                  <th
+                    onClick={() => handleSort("followUp")}
+                    className={sortConfig.key === "followUp" ? "sorted-column" : ""}
+                  >
                     Follow Up{" "}
                     {sortConfig.key === "followUp" && (
                       <span className="sort-indicator">
@@ -529,7 +505,10 @@ export default function Home() {
                     )}
                   </th>
 
-                  <th onClick={() => handleSort("cookedLevel")}>
+                  <th
+                    onClick={() => handleSort("cookedLevel")}
+                    className={sortConfig.key === "cookedLevel" ? "sorted-column" : ""}
+                  >
                     Cooked Level{" "}
                     {sortConfig.key === "cookedLevel" && (
                       <span className="sort-indicator">
@@ -544,19 +523,7 @@ export default function Home() {
 
               <tbody>
                 {sortedJobs.map((job) => (
-                  <tr
-                    key={job.id}
-                    className={selectedJobs.includes(job.id) ? "selected-row" : ""}
-                  >
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedJobs.includes(job.id)}
-                        onChange={() => toggleSelectJob(job.id)}
-                        className="select-checkbox"
-                      />
-                    </td>
-
+                  <tr key={job.id}>
                     <td
                       className="editable-cell"
                       onClick={() => !editingCell && startEdit(job.id, "position", job.position)}
@@ -603,9 +570,7 @@ export default function Home() {
 
                     <td
                       className="editable-cell"
-                      onClick={() =>
-                        !editingCell && startEdit(job.id, "maxSalary", String(job.maxSalary ?? 0))
-                      }
+                      onClick={() => !editingCell && startEdit(job.id, "maxSalary", job.maxSalary)}
                     >
                       {editingCell?.jobId === job.id && editingCell?.field === "maxSalary" ? (
                         <input
@@ -732,112 +697,98 @@ export default function Home() {
             </table>
           </div>
         </div>
-      </div>
 
-      {/* Delete confirm */}
-      {showDeleteConfirm &&
-        createPortal(
-          <div className="delete-confirm-overlay" onClick={cancelDelete}>
-            <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
-              <h3>Delete selected jobs?</h3>
-              <p>This can’t be undone.</p>
-              <div className="delete-confirm-actions">
-                <button className="btn-secondary" onClick={cancelDelete}>
-                  Cancel
-                </button>
-                <button className="btn-danger" onClick={confirmDelete}>
-                  Delete
-                </button>
+        {/* Status Dropdown Portal */}
+        {openStatusDropdown &&
+          createPortal(
+            <>
+              <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
+              <div
+                className="status-dropdown"
+                style={{ position: "absolute", top: dropdownPos.top, left: dropdownPos.left }}
+              >
+                {statusOptions.map((status) => (
+                  <div
+                    key={status}
+                    className="status-option"
+                    style={{
+                      backgroundColor:
+                        currentStatusJob?.status === status
+                          ? `${statusColors[status]}20`
+                          : "transparent",
+                      color: statusColors[status],
+                    }}
+                    onClick={() => updateStatus(openStatusDropdown, status)}
+                  >
+                    {status}
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>,
-          document.body
-        )}
+            </>,
+            document.body
+          )}
 
-      {/* Status Dropdown Portal */}
-      {openStatusDropdown &&
-        createPortal(
-          <>
-            <div className="dropdown-overlay" onClick={() => setOpenStatusDropdown(null)} />
-            <div
-              className="status-dropdown"
-              style={{ position: "absolute", top: dropdownPos.top, left: dropdownPos.left }}
-            >
-              {statusOptions.map((status) => (
-                <div
-                  key={status}
-                  className="status-option"
-                  style={{
-                    backgroundColor:
-                      currentStatusJob?.status === status ? `${statusColors[status]}20` : "transparent",
-                    color: statusColors[status],
-                  }}
-                  onClick={() => updateStatus(openStatusDropdown, status)}
-                >
-                  {status}
+        {/* Tasks Dropdown Portal */}
+        {openTasksDropdown &&
+          createPortal(
+            <>
+              <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
+              <div
+                className="tasks-dropdown"
+                style={{
+                  position: "absolute",
+                  top: tasksDropdownPos.top,
+                  left: tasksDropdownPos.left,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="tasks-list">
+                  {(() => {
+                    const currentJob = getCurrentJob(openTasksDropdown);
+                    if (!currentJob || currentJob.tasks.length === 0) {
+                      return <div className="no-tasks">No tasks yet</div>;
+                    }
+                    return currentJob.tasks.map((task, i) => (
+                      <div key={`${task}-${i}`} className="task-item">
+                        <label className="task-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={currentJob.completedTasks.includes(task)}
+                            onChange={() => toggleTask(openTasksDropdown, task)}
+                          />
+                          <span
+                            className={
+                              currentJob.completedTasks.includes(task) ? "task-completed" : ""
+                            }
+                          >
+                            {task}
+                          </span>
+                        </label>
+                      </div>
+                    ));
+                  })()}
                 </div>
-              ))}
-            </div>
-          </>,
-          document.body
-        )}
 
-      {/* Tasks Dropdown Portal */}
-      {openTasksDropdown &&
-        createPortal(
-          <>
-            <div className="dropdown-overlay" onClick={() => setOpenTasksDropdown(null)} />
-            <div
-              className="tasks-dropdown"
-              style={{
-                position: "absolute",
-                top: tasksDropdownPos.top,
-                left: tasksDropdownPos.left,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="tasks-list">
-                {(() => {
-                  const currentJob = getCurrentJob(openTasksDropdown);
-                  if (!currentJob || currentJob.tasks.length === 0) {
-                    return <div className="no-tasks">No tasks yet</div>;
-                  }
-                  return currentJob.tasks.map((task, i) => (
-                    <div key={`${task}-${i}`} className="task-item">
-                      <label className="task-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={currentJob.completedTasks.includes(task)}
-                          onChange={() => toggleTask(openTasksDropdown, task)}
-                        />
-                        <span className={currentJob.completedTasks.includes(task) ? "task-completed" : ""}>
-                          {task}
-                        </span>
-                      </label>
-                    </div>
-                  ));
-                })()}
+                <div className="add-task">
+                  <input
+                    type="text"
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addTask(openTasksDropdown);
+                    }}
+                    placeholder="New task..."
+                    className="task-input"
+                  />
+                  <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
+                    Add
+                  </button>
+                </div>
               </div>
-
-              <div className="add-task">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addTask(openTasksDropdown);
-                  }}
-                  placeholder="New task..."
-                  className="task-input"
-                />
-                <button onClick={() => addTask(openTasksDropdown)} className="add-task-btn">
-                  Add
-                </button>
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
+            </>,
+            document.body
+          )}
+      </div>
     </div>
   );
 }
