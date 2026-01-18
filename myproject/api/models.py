@@ -27,6 +27,18 @@ class JobApplication(models.Model):
     company_name = models.CharField(max_length=255)
     position = models.CharField(max_length=255)
     description = models.TextField(help_text="Job description/requirements")
+    url = models.URLField(max_length=1000, blank=True, default='', help_text="Job posting URL")
+    location = models.CharField(max_length=255, blank=True, default='', help_text="Job location")
+    max_salary = models.IntegerField(null=True, blank=True, help_text="Maximum salary")
+    deadline = models.DateField(null=True, blank=True, help_text="Application deadline")
+    follow_up = models.DateField(null=True, blank=True, help_text="Follow up date")
+    cooked_level = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Resume cookedness level (0=perfect, 100=generic)"
+    )
+    tasks = models.JSONField(default=dict, blank=True, help_text="Tasks/notes related to this job")
+    
     application_status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

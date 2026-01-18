@@ -294,45 +294,66 @@ def jobs_list_adapter(request, job_id=None):
         jobs = JobApplication.objects.all()
         data = [{
             'id': job.id,
-            'url': '',  # JobApplication doesn't have URL field
+            'url': job.url or '',
             'job_title': job.position,
             'company': job.company_name,
             'job_description': job.description,
-            'max_salary': 0,  # JobApplication doesn't have salary field
-            'location': '',  # JobApplication doesn't have location field
+            'max_salary': job.max_salary or 0,
+            'location': job.location or '',
             'status': job.application_status,
-            'deadline': None,
+            'deadline': job.deadline.isoformat() if job.deadline else None,
+            'follow_up': job.follow_up.isoformat() if job.follow_up else None,
             'date_applied': job.date_added.isoformat() if job.date_added else None,
-            'cooked_level': 0,
-            'tasks': {},
+            'cooked_level': job.cooked_level,
+            'tasks': job.tasks or {},
         } for job in jobs]
         return Response(data, status=status.HTTP_200_OK)
     
     elif request.method == 'POST':
         data = request.data
         
-        # Map from frontend format to our JobApplication format
-        job = JobApplication.objects.create(
-            company_name=data.get('company', 'Unknown'),
-            position=data.get('job_title', ''),
-            description=data.get('job_description', ''),
-            application_status=data.get('status', 'yet_to_apply')
-        )
+        # Helper to parse dates (convert empty strings to None)
+        def parse_date(value):
+            if value in [None, '', 'null']:
+                return None
+            return value
+        
+        try:
+            # Map from frontend format to our JobApplication format
+            job = JobApplication.objects.create(
+                company_name=data.get('company', 'Unknown'),
+                position=data.get('job_title', ''),
+                description=data.get('job_description', ''),
+                url=data.get('url', ''),
+                location=data.get('location', ''),
+                max_salary=data.get('max_salary') or None,
+                deadline=parse_date(data.get('deadline')),
+                follow_up=parse_date(data.get('follow_up')),
+                cooked_level=data.get('cooked_level', 0),
+                tasks=data.get('tasks', {}),
+                application_status=data.get('status', 'Applying')
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to create job: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Return in the format expected by frontend
         return Response({
             'id': job.id,
-            'url': '',
+            'url': job.url or '',
             'job_title': job.position,
             'company': job.company_name,
             'job_description': job.description,
-            'max_salary': 0,
-            'location': '',
+            'max_salary': job.max_salary or 0,
+            'location': job.location or '',
             'status': job.application_status,
-            'deadline': None,
+            'deadline': job.deadline.isoformat() if job.deadline else None,
+            'follow_up': job.follow_up.isoformat() if job.follow_up else None,
             'date_applied': job.date_added.isoformat() if job.date_added else None,
-            'cooked_level': 0,
-            'tasks': {},
+            'cooked_level': job.cooked_level,
+            'tasks': job.tasks or {},
         }, status=status.HTTP_201_CREATED)
     
     elif request.method == 'PATCH':
@@ -344,6 +365,12 @@ def jobs_list_adapter(request, job_id=None):
         except JobApplication.DoesNotExist:
             return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        # Helper to parse dates (convert empty strings to None)
+        def parse_date(value):
+            if value in [None, '', 'null']:
+                return None
+            return value
+        
         # Update fields from request
         if 'status' in request.data:
             job.application_status = request.data['status']
@@ -353,23 +380,38 @@ def jobs_list_adapter(request, job_id=None):
             job.position = request.data['job_title']
         if 'job_description' in request.data:
             job.description = request.data['job_description']
+        if 'url' in request.data:
+            job.url = request.data['url']
+        if 'location' in request.data:
+            job.location = request.data['location']
+        if 'max_salary' in request.data:
+            job.max_salary = request.data['max_salary'] or None
+        if 'deadline' in request.data:
+            job.deadline = parse_date(request.data['deadline'])
+        if 'follow_up' in request.data:
+            job.follow_up = parse_date(request.data['follow_up'])
+        if 'cooked_level' in request.data:
+            job.cooked_level = request.data['cooked_level']
+        if 'tasks' in request.data:
+            job.tasks = request.data['tasks']
         
         job.save()
         
         # Return updated job in expected format
         return Response({
             'id': job.id,
-            'url': '',
+            'url': job.url or '',
             'job_title': job.position,
             'company': job.company_name,
             'job_description': job.description,
-            'max_salary': 0,
-            'location': '',
+            'max_salary': job.max_salary or 0,
+            'location': job.location or '',
             'status': job.application_status,
-            'deadline': None,
+            'deadline': job.deadline.isoformat() if job.deadline else None,
+            'follow_up': job.follow_up.isoformat() if job.follow_up else None,
             'date_applied': job.date_added.isoformat() if job.date_added else None,
-            'cooked_level': 0,
-            'tasks': {},
+            'cooked_level': job.cooked_level,
+            'tasks': job.tasks or {},
         }, status=status.HTTP_200_OK)
     
     elif request.method == 'DELETE':

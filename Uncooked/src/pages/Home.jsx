@@ -34,9 +34,9 @@ export default function Home() {
             deadline: job.deadline ? job.deadline.split("T")[0] : null,
             dateApplied: job.date_applied ? job.date_applied.split("T")[0] : null,
             cookedLevel: job.cooked_level || 0,
-            followUp: null,
-            tasks: [],
-            completedTasks: [],
+            followUp: job.follow_up ? job.follow_up.split("T")[0] : null,
+            tasks: job.tasks?.tasks || [],
+            completedTasks: job.tasks?.completedTasks || [],
           }));
           setJobs(mappedJobs);
         }
@@ -104,9 +104,10 @@ export default function Home() {
           max_salary: jobFromModal.maxSalary || 0,
           status: jobFromModal.status,
           deadline: jobFromModal.deadline || null,
+          follow_up: jobFromModal.followUp || null,
           date_applied: jobFromModal.dateApplied,
           cooked_level: 1,
-          tasks: {},
+          tasks: { tasks: [], completedTasks: [] },
         }),
       });
 
@@ -261,16 +262,39 @@ export default function Home() {
     setEditValue(currentValue ?? "");
   };
 
-  const saveEdit = (jobId, field) => {
+  const saveEdit = async (jobId, field) => {
+    const newValue = field === "maxSalary" ? Number(editValue || 0) : editValue;
+    
+    // Update UI immediately
     setJobs((prev) =>
       prev.map((job) =>
         job.id === jobId
-          ? { ...job, [field]: field === "maxSalary" ? Number(editValue || 0) : editValue }
+          ? { ...job, [field]: newValue }
           : job
       )
     );
     setEditingCell(null);
     setEditValue("");
+    
+    // Save to backend
+    try {
+      const updateData = {};
+      // Map frontend field names to backend field names
+      if (field === 'maxSalary') updateData.max_salary = newValue;
+      else if (field === 'company') updateData.company = newValue;
+      else if (field === 'position') updateData.job_title = newValue;
+      else if (field === 'location') updateData.location = newValue;
+      else if (field === 'url') updateData.url = newValue;
+      else updateData[field] = newValue;
+      
+      await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+    } catch (error) {
+      console.error('Error saving edit:', error);
+    }
   };
 
   const cancelEdit = () => {
@@ -302,45 +326,120 @@ export default function Home() {
   };
 
   // Date updates
-  const updateDate = (jobId, field, value) => {
+  const updateDate = async (jobId, field, value) => {
+    // Update UI immediately
     setJobs((prev) =>
       prev.map((job) => (job.id === jobId ? { ...job, [field]: value || null } : job))
     );
+    
+    // Save to backend
+    try {
+      const updateData = {};
+      // Map frontend field names to backend field names
+      if (field === 'deadline') updateData.deadline = value || null;
+      else if (field === 'followUp') updateData.follow_up = value || null;
+      else updateData[field] = value || null;
+      
+      await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+    } catch (error) {
+      console.error('Error updating date:', error);
+    }
   };
 
   // Star rating
-  const updateRating = (jobId, rating) => {
+  const updateRating = async (jobId, rating) => {
+    // Update UI immediately
     setJobs((prev) =>
       prev.map((job) => (job.id === jobId ? { ...job, cookedLevel: rating } : job))
     );
+    
+    // Save to backend
+    try {
+      await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cooked_level: rating }),
+      });
+    } catch (error) {
+      console.error('Error updating rating:', error);
+    }
   };
 
   // Task management
-  const toggleTask = (jobId, task) => {
+  const toggleTask = async (jobId, task) => {
+    // Find current job to get updated completedTasks
+    const currentJob = jobs.find(j => j.id === jobId);
+    if (!currentJob) return;
+    
+    const isCompleted = currentJob.completedTasks.includes(task);
+    const newCompletedTasks = isCompleted
+      ? currentJob.completedTasks.filter((t) => t !== task)
+      : [...currentJob.completedTasks, task];
+    
+    // Update UI immediately
     setJobs((prev) =>
       prev.map((job) => {
         if (job.id !== jobId) return job;
-        const isCompleted = job.completedTasks.includes(task);
         return {
           ...job,
-          completedTasks: isCompleted
-            ? job.completedTasks.filter((t) => t !== task)
-            : [...job.completedTasks, task],
+          completedTasks: newCompletedTasks,
         };
       })
     );
+    
+    // Save to backend
+    try {
+      await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: {
+            tasks: currentJob.tasks,
+            completedTasks: newCompletedTasks
+          }
+        }),
+      });
+    } catch (error) {
+      console.error('Error toggling task:', error);
+    }
   };
 
-  const addTask = (jobId) => {
+  const addTask = async (jobId) => {
     if (!jobId) return;
     if (!newTask.trim()) return;
 
+    const currentJob = jobs.find(j => j.id === jobId);
+    if (!currentJob) return;
+    
+    const newTasks = [...currentJob.tasks, newTask.trim()];
+    
+    // Update UI immediately
     setJobs((prev) =>
       prev.map((job) =>
-        job.id === jobId ? { ...job, tasks: [...job.tasks, newTask.trim()] } : job
+        job.id === jobId ? { ...job, tasks: newTasks } : job
       )
     );
     setNewTask("");
+    
+    // Save to backend
+    try {
+      await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: {
+            tasks: newTasks,
+            completedTasks: currentJob.completedTasks
+          }
+        }),
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+    }
   };
 
   const getCurrentJob = (jobId) => jobs.find((j) => j.id === jobId);
