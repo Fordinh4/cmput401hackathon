@@ -291,6 +291,43 @@ const Home = () => {
   const statusCounts = getStatusCounts();
   const totalJobs = jobs.length;
 
+  const getDeadlineStyle = (deadline) => {
+  if (!deadline) return {};
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadlineDate = new Date(deadline);
+  deadlineDate.setHours(0, 0, 0, 0);
+  
+  // Calculate difference in days
+  const diffTime = deadlineDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  // Case 1: Deadline has passed
+  if (diffDays < 0) {
+    return {
+      backgroundColor: '#f8d7da', // Soft red/pink
+      color: '#721c24',           // Dark red text
+      borderColor: '#f5c6cb',
+      fontWeight: 'bold'
+    };
+  }
+
+  // Case 2: Deadline is approaching (within 7 days)
+  if (diffDays <= 7) {
+    // Calculate opacity: 0 days = 0.8 opacity, 7 days = 0.1 opacity
+    const opacity = 0.8 - (diffDays * 0.1);
+    return {
+      backgroundColor: `rgba(199, 84, 80, ${opacity})`, // Using your "No Response" red color
+      color: diffDays <= 2 ? 'white' : 'inherit',      // White text if it's very red
+      borderColor: '#C75450'
+    };
+  }
+
+  // Case 3: Deadline is far away
+  return {};
+};
+
   return (
     <div className="app-container">
       {/* Dashboard */}
@@ -412,6 +449,7 @@ const Home = () => {
                   </td>
                   <td 
                     className="editable-cell"
+                    data-label="Position"
                     onClick={() => !editingCell && startEdit(job.id, 'position', job.position)}
                   >
                     {editingCell?.jobId === job.id && editingCell?.field === 'position' ? (
@@ -433,6 +471,7 @@ const Home = () => {
                   </td>
                   <td 
                     className="editable-cell"
+                    data-label="Company"
                     onClick={() => !editingCell && startEdit(job.id, 'company', job.company)}
                   >
                     {editingCell?.jobId === job.id && editingCell?.field === 'company' ? (
@@ -454,6 +493,7 @@ const Home = () => {
                   </td>
                   <td 
                     className="editable-cell"
+                    data-label="Salary"
                     onClick={() => !editingCell && startEdit(job.id, 'maxSalary', job.maxSalary)}
                   >
                     {editingCell?.jobId === job.id && editingCell?.field === 'maxSalary' ? (
@@ -475,6 +515,7 @@ const Home = () => {
                   </td>
                   <td 
                     className="editable-cell"
+                    data-label="Location"
                     onClick={() => !editingCell && startEdit(job.id, 'location', job.location)}
                   >
                     {editingCell?.jobId === job.id && editingCell?.field === 'location' ? (
@@ -494,7 +535,7 @@ const Home = () => {
                       job.location
                     )}
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <div 
                       ref={(el) => (statusRefs.current[job.id] = el)}
                       className="status-dropdown-trigger"
@@ -509,7 +550,7 @@ const Home = () => {
                       <ChevronDown size={16} />
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Saved">
                     <input
                       type="date"
                       value={job.dateSaved || ''}
@@ -517,15 +558,16 @@ const Home = () => {
                       className="date-input"
                     />
                   </td>
-                  <td>
+                  <td data-label="Deadline">
                     <input
                       type="date"
                       value={job.deadline || ''}
                       onChange={(e) => updateDate(job.id, 'deadline', e.target.value)}
                       className="date-input"
+                      style={getDeadlineStyle(job.deadline)}
                     />
                   </td>
-                  <td>
+                  <td data-label="Applied">
                     <input
                       type="date"
                       value={job.dateApplied || ''}
@@ -533,7 +575,7 @@ const Home = () => {
                       className="date-input"
                     />
                   </td>
-                  <td>
+                  <td data-label="Follow Up">
                     <input
                       type="date"
                       value={job.followUp || ''}
@@ -541,7 +583,7 @@ const Home = () => {
                       className="date-input"
                     />
                   </td>
-                  <td>
+                  <td data-label="Cooked">
                     <div className="star-rating">
                       {[1, 2, 3, 4, 5].map(star => (
                         <span
@@ -554,7 +596,7 @@ const Home = () => {
                       ))}
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Tasks">
                     <div
                       ref={(el) => (tasksRefs.current[job.id] = el)}
                       className="tasks-trigger"
