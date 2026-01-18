@@ -279,9 +279,26 @@ export default function Home() {
   };
 
   // Status change
-  const updateStatus = (jobId, newStatus) => {
+  const updateStatus = async (jobId, newStatus) => {
+    // Update UI immediately for better UX
     setJobs((prev) => prev.map((job) => (job.id === jobId ? { ...job, status: newStatus } : job)));
     setOpenStatusDropdown(null);
+    
+    // Save to backend
+    try {
+      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to update status');
+        // Optionally revert on failure
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   // Date updates

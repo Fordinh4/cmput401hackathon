@@ -34,6 +34,7 @@ router.register(r'resume/tailored', TailoredResumeViewSet, basename='tailored-re
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/hello/', hello),
-    path('api/jobs/', jobs_list_adapter),  # Adapter for frontend compatibility
+    path('api/jobs/', jobs_list_adapter),  # Adapter for frontend compatibility (GET/POST)
+    path('api/jobs/<int:job_id>/', jobs_list_adapter),  # Adapter for frontend compatibility (PATCH)
     path('api/', include(router.urls)),
 ]

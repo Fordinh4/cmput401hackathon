@@ -281,12 +281,13 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
 
 
 # Adapter endpoint for frontend compatibility
-@api_view(['GET', 'POST'])
-def jobs_list_adapter(request):
+@api_view(['GET', 'POST', 'PATCH'])
+def jobs_list_adapter(request, job_id=None):
     """
     Adapter endpoint that maps the frontend's expected API to our JobApplication model.
     GET: Returns all jobs in the format expected by Home.jsx
     POST: Creates a job from the format sent by AddJobModal.jsx
+    PATCH: Updates a job's status or other fields
     """
     if request.method == 'GET':
         jobs = JobApplication.objects.all()
@@ -332,4 +333,41 @@ def jobs_list_adapter(request):
             'cooked_level': 0,
             'tasks': {},
         }, status=status.HTTP_201_CREATED)
+    
+    elif request.method == 'PATCH':
+        if not job_id:
+            return Response({'error': 'Job ID required for update'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            job = JobApplication.objects.get(id=job_id)
+        except JobApplication.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Update fields from request
+        if 'status' in request.data:
+            job.application_status = request.data['status']
+        if 'company' in request.data:
+            job.company_name = request.data['company']
+        if 'job_title' in request.data:
+            job.position = request.data['job_title']
+        if 'job_description' in request.data:
+            job.description = request.data['job_description']
+        
+        job.save()
+        
+        # Return updated job in expected format
+        return Response({
+            'id': job.id,
+            'url': '',
+            'job_title': job.position,
+            'company': job.company_name,
+            'job_description': job.description,
+            'max_salary': 0,
+            'location': '',
+            'status': job.application_status,
+            'deadline': None,
+            'date_applied': job.date_added.isoformat() if job.date_added else None,
+            'cooked_level': 0,
+            'tasks': {},
+        }, status=status.HTTP_200_OK)
     
