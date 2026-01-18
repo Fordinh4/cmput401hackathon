@@ -362,6 +362,43 @@ export default function Home() {
     sortedJobs.length > 0 && sortedJobs.every((j) => selectedJobs.includes(j.id));
 
 
+  const getDeadlineStyle = (deadline) => {
+    if (!deadline) return {};
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+
+    // Calculate difference in days
+    const diffTime = deadlineDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Case 1: Deadline has passed
+    if (diffDays < 0) {
+      return {
+        backgroundColor: '#f8d7da', // Soft red/pink
+        color: '#721c24',           // Dark red text
+        borderColor: '#f5c6cb',
+        fontWeight: 'bold'
+      };
+    }
+
+    // Case 2: Deadline is approaching (within 7 days)
+    if (diffDays <= 7) {
+      // Calculate opacity: 0 days = 0.8 opacity, 7 days = 0.1 opacity
+      const opacity = 0.8 - (diffDays * 0.1);
+      return {
+        backgroundColor: `rgba(199, 84, 80, ${opacity})`, // Using your "No Response" red color
+        color: diffDays <= 2 ? 'white' : 'inherit',      // White text if it's very red
+        borderColor: '#C75450'
+      };
+    }
+
+    // Case 3: Deadline is far away
+    return {};
+  };
+
   return (
     <div className="app-shell">
       <AddJobModal isOpen={open} onClose={() => setOpen(false)} onSave={handleSave} />
@@ -711,6 +748,7 @@ export default function Home() {
                         value={job.deadline || ""}
                         onChange={(e) => updateDate(job.id, "deadline", e.target.value)}
                         className="date-input"
+                        style={getDeadlineStyle(job.deadline)}
                       />
                     </td>
 
