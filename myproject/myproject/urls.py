@@ -16,9 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from api.views import hello  # Import your view
+from api.views import jobs_list, view_page
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/hello/', hello),  # Add this line
+    path('api/jobs/', jobs_list, name='jobs_list'),
+    path('api/jobs/<int:id>/', view_page, name='view_page'),
 ]
