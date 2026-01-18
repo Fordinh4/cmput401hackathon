@@ -726,7 +726,7 @@ export default function Home() {
                     onClick={() => handleSort("cookedLevel")}
                     className={sortConfig.key === "cookedLevel" ? "sorted-column" : ""}
                   >
-                    Cooked Level{" "}
+                    Excitement Level{" "}
                     {sortConfig.key === "cookedLevel" && (
                       <span className="sort-indicator">
                         {sortConfig.direction === "asc" ? "▲" : "▼"}
