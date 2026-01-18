@@ -355,11 +355,6 @@ export default function Home() {
               <Briefcase className="header-icon" />
               <h1>Job Application Tracker</h1>
             </div>
-
-            <button className="add-job-btn" onClick={() => setOpen(true)}>
-              <Plus size={20} />
-              Add New Job
-            </button>
           </div>
         </header>
 
@@ -402,6 +397,12 @@ export default function Home() {
                 <div className="status-card-count">{statusCounts[status] || 0}</div>
               </div>
             ))}
+          </div>
+          <div className="add-job-container">
+            <button className="add-job-btn" onClick={() => setOpen(true)}>
+              <Plus size={20} />
+              Add New Job
+            </button>
           </div>
         </div>
 
