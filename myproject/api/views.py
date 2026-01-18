@@ -277,4 +277,58 @@ class TailoredResumeViewSet(viewsets.ModelViewSet):
                 {'error': f'PDF generation failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# Adapter endpoint for frontend compatibility
+@api_view(['GET', 'POST'])
+def jobs_list_adapter(request):
+    """
+    Adapter endpoint that maps the frontend's expected API to our JobApplication model.
+    GET: Returns all jobs in the format expected by Home.jsx
+    POST: Creates a job from the format sent by AddJobModal.jsx
+    """
+    if request.method == 'GET':
+        jobs = JobApplication.objects.all()
+        data = [{
+            'id': job.id,
+            'url': '',  # JobApplication doesn't have URL field
+            'job_title': job.position,
+            'company': job.company_name,
+            'job_description': job.description,
+            'max_salary': 0,  # JobApplication doesn't have salary field
+            'location': '',  # JobApplication doesn't have location field
+            'status': job.application_status,
+            'deadline': None,
+            'date_applied': job.date_added.isoformat() if job.date_added else None,
+            'cooked_level': 0,
+            'tasks': {},
+        } for job in jobs]
+        return Response(data, status=status.HTTP_200_OK)
+    
+    elif request.method == 'POST':
+        data = request.data
+        
+        # Map from frontend format to our JobApplication format
+        job = JobApplication.objects.create(
+            company_name=data.get('company', 'Unknown'),
+            position=data.get('job_title', ''),
+            description=data.get('job_description', ''),
+            application_status=data.get('status', 'yet_to_apply')
+        )
+        
+        # Return in the format expected by frontend
+        return Response({
+            'id': job.id,
+            'url': '',
+            'job_title': job.position,
+            'company': job.company_name,
+            'job_description': job.description,
+            'max_salary': 0,
+            'location': '',
+            'status': job.application_status,
+            'deadline': None,
+            'date_applied': job.date_added.isoformat() if job.date_added else None,
+            'cooked_level': 0,
+            'tasks': {},
+        }, status=status.HTTP_201_CREATED)
     

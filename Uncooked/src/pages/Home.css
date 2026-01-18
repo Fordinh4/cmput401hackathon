@@ -1,0 +1,759 @@
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #F5F5F5;
+  color: #273E47;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-container {
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
+  padding-top: 20px;
+  margin: 0;
+}
+
+/* Dashboard */
+.dashboard {
+  margin-bottom: 20px;
+}
+
+/* Progress Container */
+.progress-container {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.progress-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #273E47;
+}
+
+.progress-bar {
+  display: flex;
+  height: 40px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #e0e0e0;
+}
+
+.progress-segment {
+  transition: all 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.progress-segment:hover {
+  opacity: 0.85 !important;
+}
+
+/* Status Cards */
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.status-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.status-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.status-card-header {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-card-count {
+  font-size: 32px;
+  font-weight: bold;
+  color: #273E47;
+}
+
+/* Add Job Button Container */
+.add-job-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.add-job-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #273E47, #BD632F);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.add-job-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Table Container */
+.table-container {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Action Bar */
+.action-bar {
+  background: linear-gradient(135deg, #273E47, #BD632F);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.selected-count {
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #bf1f1a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+  background: #ed1912;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.jobs-table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: separate; /* Changed from collapse to separate */
+  border-spacing: 0;          /* Removes gaps between cells */
+  border-radius: 9px;        /* The "inner" curve radius */
+  overflow: hidden;
+}
+
+.jobs-table thead {
+  background-color: #273E47;
+  color: white;
+}
+
+.jobs-table th {
+  padding: 16px 14px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  position: relative;
+}
+
+.jobs-table th:hover {
+  background-color: #1e2f36;
+}
+
+.jobs-table th.sorted-column {
+  background-color: #D8973C !important;
+  color: white;
+}
+
+.jobs-table th.sorted-column:hover {
+  background-color: #BD632F !important;
+}
+
+.sort-indicator {
+  margin-left: 6px;
+  font-size: 11px;
+  display: inline-block;
+  animation: sortPulse 0.3s ease;
+}
+
+@keyframes sortPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.jobs-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s ease;
+}
+
+.jobs-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.jobs-table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.jobs-table tbody tr.selected-row {
+  background-color: #D8973C20 !important;
+}
+
+.jobs-table tbody tr.selected-row:hover {
+  background-color: #D8973C30 !important;
+}
+
+.jobs-table td {
+  padding: 16px 14px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+/* Checkboxes */
+.select-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #D8973C;
+}
+
+/* Editable Cells */
+.editable-cell {
+  cursor: pointer;
+  position: relative;
+}
+
+.editable-cell:hover {
+  background-color: #D8973C20;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 2px solid #D8973C;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.edit-input:focus {
+  border-color: #BD632F;
+}
+
+/* Status Dropdown */
+.status-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 2px solid;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+}
+
+.status-dropdown-trigger:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.status-dropdown {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.status-dropdown.dropdown-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.status-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+}
+
+.status-option:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-left-color: currentColor;
+}
+
+/* Date Inputs */
+.date-input {
+  padding: 8px 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  width: 100%;
+}
+
+.date-input:hover {
+  border-color: #D8973C;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #BD632F;
+}
+
+/* Star Rating */
+.star-rating {
+  display: flex;
+  gap: 4px;
+}
+
+.star {
+  font-size: 22px;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.star:hover {
+  transform: scale(1.2);
+}
+
+.star-filled {
+  color: #D8973C;
+}
+
+/* Tasks Dropdown */
+.tasks-trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  background-color: #273E4720;
+  color: #273E47;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  border: 2px solid #273E47;
+}
+
+.tasks-trigger:hover {
+  background-color: #273E4730;
+  transform: translateY(-1px);
+}
+
+.tasks-dropdown {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 280px;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tasks-dropdown.dropdown-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.tasks-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px;
+  flex: 1;
+}
+
+.no-tasks {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.task-item {
+  padding: 8px 0;
+}
+
+.task-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #D8973C;
+}
+
+.task-checkbox span {
+  font-size: 14px;
+  color: #273E47;
+  transition: all 0.2s ease;
+}
+
+.task-completed {
+  text-decoration: line-through;
+  color: #999 !important;
+}
+
+.add-task {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+.task-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.task-input:focus {
+  border-color: #D8973C;
+}
+
+.add-task-btn {
+  padding: 8px 16px;
+  background-color: #D8973C;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-task-btn:hover {
+  background-color: #BD632F;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .status-cards {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  
+  .status-card-count {
+    font-size: 28px;
+  }
+  
+  .table-wrapper {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .add-job-container {
+    justify-content: center;
+  }
+  
+  .add-job-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container {
+    padding: 12px;
+  }
+  
+  .progress-container,
+  .table-container {
+    padding: 16px;
+  }
+}
+
+/* Delete Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #273E47;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: #273E47;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #273E47;
+  line-height: 1.5;
+}
+
+.modal-warning {
+  color: #670501;
+  font-weight: 600;
+  font-size: 14px !important;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #273E47;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.confirm-btn {
+  background: #C75450;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background: #d33630;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(199, 84, 80, 0.3);
+}
+
+/* Delete Confirmation Modal (FIXED + CENTERED) */
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0; /* top:0 left:0 right:0 bottom:0 */
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.delete-confirm {
+  background: white;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(244, 241, 241, 0.3);
+  animation: deleteModalIn 0.25s ease;
+}
+
+@keyframes deleteModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.delete-confirm h3 {
+  margin-bottom: 8px;
+}
+
+.delete-confirm p {
+  margin-bottom: 16px;
+  color: #555;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Danger / Delete button */
+.btn-danger {
+  background-color: #e74c3c; /* red */
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background-color: #cf3e30; /* darker red on hover */
+}
+
+.btn-danger:focus {
+  outline: none;
+}

@@ -21,7 +21,8 @@ from api.views import (
     hello,
     MasterResumeViewSet,
     JobApplicationViewSet,
-    TailoredResumeViewSet
+    TailoredResumeViewSet,
+    jobs_list_adapter
 )
 
 # Create router for ViewSets
@@ -33,5 +34,6 @@ router.register(r'resume/tailored', TailoredResumeViewSet, basename='tailored-re
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/hello/', hello),
+    path('api/jobs/', jobs_list_adapter),  # Adapter for frontend compatibility
     path('api/', include(router.urls)),
 ]
